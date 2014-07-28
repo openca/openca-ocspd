@@ -1,0 +1,105 @@
+#!/bin/bash
+#
+# Startup script for the OCSPD responder
+#
+# chkconfig: 345 85 15
+# description: OpenCA OCSP Responder
+# processname: openca-ocspd
+
+prefix="@prefix@";
+sbin="${prefix}/sbin";
+etc="${prefix}/etc/ocspd";
+run="${prefix}/var/run";
+
+# Source function library.
+[ -f "/etc/rc.d/init.d/functions" ] && . /etc/rc.d/init.d/functions
+
+ocspd="${sbin}/ocspd";
+conf="${etc}/ocspd.xml";
+
+# Check the 
+pidfile="${run}/ocspd.pid";
+pid=`cat $pidfile 2>/dev/null`;
+
+if [ -z "$pid" ] ; then
+	shellPid=$$
+	ocspPid=`pgrep ocspd`
+	pid=`echo $ocspPid | sed -e "s|$shellPid||" | sed -e "s| ||g"`
+fi
+
+# See how we were called.
+case "$1" in
+	start)
+		echo -n "Starting OCSP Responder: "
+		kill -s 0 "$pid" 2>/dev/null && 
+		echo "ERROR, responder is already running" ||
+		( ${ocspd} -c "${conf}" -d && echo "Done." ||
+			echo "Error, check logs!" );
+		;;
+  start-verbose)
+		echo -n "Starting OCSP Responder: "
+		kill -s 0 "$pid" 2>/dev/null && 
+			echo "ERROR, responder is already running" ||
+			( ${ocspd} -c "${conf}" -d -v && echo "Done." ||
+				echo "Error, check logs!" );
+		;;
+  start-debug)
+		echo -n "Starting OCSP Responder: "
+		kill -s 0 "$pid" 2>/dev/null && 
+			echo "ERROR, responder is already running" ||
+			( ${ocspd} -c "${conf}" -d -v -debug && echo "Done." ||
+				echo "Error, check logs!" );
+		echo "Done."
+		;;
+  start-wrongsig)
+		echo -n "Starting OCSP Responder (WRONG Signatures): "
+		kill -s 0 "$pid" 2>/dev/null && 
+			echo "ERROR, responder is already running" ||
+			( ${ocspd} -c "${conf}" -d -v -debug -testmode && echo "Done." ||
+				echo "Error, check logs!" );
+		echo "Done."
+		;;
+  stop)
+		echo -n "Shutting down OCSP Responder: "
+		kill -s 15 "${pid}" 2> /dev/null && 
+			echo "Done." ||
+			echo "already stopped?"
+		rm -f "$pidfile"
+		;;
+  status)
+		echo -n "OCSP Responder is "
+		kill -s 0 "$pid" 2>/dev/null && echo "running ( $pid )" ||
+			echo "stopped."
+		;;
+  reload-crl)
+		echo -n "Sending Reload CRL Signal to OCSP ... "
+		kill -s HUP "$pid" 2>/dev/null && echo "Ok." ||
+			echo "server not running ?"
+		;;
+  restart)
+		$0 stop
+		sleep 2
+		$0 start
+		;;
+  *)
+		echo
+		echo "  OpenCA OCSPD - Startup Script"
+		echo "  (c) 2002-"`date +%Y`" by Massimiliano Pala and OpenCA Labs"
+		echo "  All Rights Reserved"
+		echo
+		echo "    Usage: $0 [ target ]"
+		echo
+		echo "  Where [ target ] is one of:"
+		echo "  * start ............: Start OCSPD (normal)"
+		echo "  * start-debug ......: Start OCSPD (debug)"
+		echo "  * start-wrongsig ...: Start OCSPD (wrong signatures)"
+		echo "  * stop .............: Stops the OCSPD"
+		echo "  * status ...........: Returns the status of OCSPD"
+		echo "  * reload-crl .......: Forces reloading of CRLs"
+		echo "  * restart ..........: Restarts OCSPD (normal)"
+		echo
+		exit 1
+		;;
+esac
+
+exit 0

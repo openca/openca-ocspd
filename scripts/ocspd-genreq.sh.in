@@ -1,0 +1,93 @@
+#!/bin/bash
+
+prefix="@prefix@"
+token="ocspServerToken"
+defSubject="CN=OCSP Server, O=OpenCA, C=US"
+defAlgor="RSA-SHA256"
+defBits="2048"
+
+echo
+echo "OCSP Key and Certificate Request generation Tool"
+echo "(c) 2009 by Massimiliano Pala and OpenCA Labs"
+echo "    All Rights Reserved"
+echo ""
+
+echo "Please Enter the Server's Subject (eg., $defSubject):"
+read subject
+
+if [ "x$subject" = "x" ] ; then
+	subject=$defSubject
+fi
+
+echo "Please Enter the Algorithm (default: $defAlgor):"
+read algor
+
+if [ "x$algor" = "x" ] ; then
+	algor=$defAlgor
+fi
+
+defBits=1024
+[ `echo $algor | egrep -i "rsa"` ] && defBits=2048
+[ `echo $algor | egrep -i "ecdsa"` ] && defBits=384
+
+echo "Please Enter the Key Size (default: $defBits):"
+read bits
+
+if [ "x$bits" = "x" ] ; then
+	bits=$defBits
+fi
+
+echo ""
+echo "Parameters Summary:"
+echo " - prefix ................: $prefix"
+echo " - token Name ............: $token"
+echo " - subject ...............: $subject"
+echo " - algorithm .............: $algor"
+echo " - key size ..............: $bits bits"
+echo
+echo "This tool uses the pki-tool from libpki. The configuration of the"
+echo "token can be found in '$prefix/etc/ocspd/pki/token.d'"
+echo
+echo "[ Use a password when prompted if you want the server key to be encrypted ]"
+echo ""
+
+# Generating a request for the OCSP server
+# pki-tool genreq -config "$prefix/etc/ocspd/pki" -token "$token" \
+#	-newkey -bits $bits -subject "$subject" -algor "$algor" \
+#	-out "$prefix/etc/ocspd/req.pem" -batch
+
+pki-tool genreq -config "$prefix/etc/ocspd/pki" -outkey "$prefix/etc/ocspd/private/key.pem" \
+	-newkey -bits $bits -subject "$subject" -algor "$algor" \
+	-out "$prefix/etc/ocspd/req.pem" -batch
+
+if [ $? -eq 0 ] ; then
+	echo ""
+	echo "Certificate Request:"
+	echo " - $prefix/etc/ocspd/req.pem"
+	echo
+	echo "What's Next ?"
+	echo "============="
+	echo
+	echo "   Please upload the request to your CA. Once you receive the certificate,"
+	echo "   you should put the server certificate in:"
+	echo
+	echo "      $prefix/etc/ocspd/certs/cert.pem"
+	echo
+	echo "   and the CA certificate in:"
+	echo
+	echo "      $prefix/etc/ocspd/certs/cacert.pem."
+	echo ""
+	echo "   Then restart the server to reflect the changes. Remember to"
+	echo "   add/remove the configuration of your CAs from:"
+	echo
+	echo "      $prefix/etc/ocspd/ca.d/"
+	echo
+else
+	echo "ERROR, can not complete task. Please check write permissions for target(s)"
+	echo "[most probably you need administrator privileges to continue]."
+	echo
+	exit 1
+fi
+
+
+exit 0;

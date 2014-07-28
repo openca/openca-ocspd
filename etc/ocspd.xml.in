@@ -1,0 +1,82 @@
+<?xml version="1.0" ?>
+<!-- OCSP Daemon configuration -->
+<pki:serverConfig xmlns:pki="http://www.openca.org/openca/pki/1/0/0">
+   <!-- General Section: details about server configuration and dirs -->
+   <pki:general>
+      <!-- Directory where configurations about libPKI token (e.g., token.d/,
+           hsm.d/, etc... ) are located -->
+      <pki:pkiConfigDir>@prefix@/etc/ocspd/pki</pki:pkiConfigDir>
+      <!-- Name of the token configuration to be used for the server, check
+           the libPKI documentations for more details -->
+      <pki:token>ocspServerToken</pki:token>
+      <!-- Directory containing all the configuration files for the supported
+           CAs -->
+      <pki:caConfigDir>@prefix@/etc/ocspd/ca.d</pki:caConfigDir>
+      <!-- File where the server will write its own Process id (PID) into
+           upon startup -->
+      <pki:pidFile>@prefix@/var/run/ocspd.pid</pki:pidFile>
+      <!-- Number of threads to be pre-spawned -->
+      <pki:spawnThreads>10</pki:spawnThreads>
+      <!-- Auto Reload Timeout (secs) -->
+      <pki:crlAutoReload>3600</pki:crlAutoReload>
+      <!-- Reload Expired CRLs -->
+      <pki:crlReloadExpired>yes</pki:crlReloadExpired>
+      <!-- Check CRLs validity every x seconds -->
+      <pki:crlCheckValidity>600</pki:crlCheckValidity>
+   </pki:general>
+   <!-- Security Related Configurations -->
+   <pki:security>
+      <!-- User the server should run as when dropping privileges -->
+      <pki:user>@user@</pki:user>
+      <!-- Group the server should run as when dropping privileges -->
+      <pki:group>@group@</pki:group>
+      <!-- Directory where the server should be chrooted, point to a valid
+           directory in order to have the server chrooted. Leave it blank
+           otherwise -->
+      <!-- <pki:chrootDir></pki:chrootDir> -->
+   </pki:security>
+   <!-- Service Network Configuration -->
+   <pki:network>
+      <!-- Address the server should bind to when starting, 0.0.0.0 binds
+           to any available addresses, the default port is 2560 -->
+      <pki:bindAddress>http://0.0.0.0:2560</pki:bindAddress>
+      <!-- Use this to specify support for 1.0 or 1.1 HTTP -->
+      <pki:httpProtocol>1.0</pki:httpProtocol>
+      <!-- Use httpBaseURL if you want to respond only to certain URLs,
+           leave it blank otherwise -->
+      <pki:httpBaseURL></pki:httpBaseURL>
+      <!-- Timeout used for incoming connections, the server will close the
+           socket if no data is received within `timeout` seconds -->
+      <pki:timeOut>5</pki:timeOut>
+   </pki:network>
+   <!-- OCSP response configuration -->
+   <pki:response>
+      <!-- Max size of incoming requests -->
+      <pki:maxReqSize>8192</pki:maxReqSize>
+      <!-- Digest Algorithm to be used when building responses, currently
+           the standard specifies SHA1 as the only supported algorithm -->
+      <pki:digestAlgorithm>SHA1</pki:digestAlgorithm>
+      <!-- Digest Algorithm to be used when signing responses, currently
+           for some CISCO devices SHA1 is the only supported algorithm -->
+      <pki:signatureDigestAlgorithm>SHA1</pki:signatureDigestAlgorithm>
+      <!-- Set this option if you want to include the KeyID. If you are
+           unsure about this setting, use 'yes'. -->
+      <pki:addResponseKeyID>yes</pki:addResponseKeyID>
+      <!-- Validity Period of responses, clients are not supposed to ask
+           informations about the same CA within this validity period
+           If the two options are both set to '0' the 'nextUpdate' field
+           in the OCSP response will be left NULL indicating new data
+           can be made available anytime (this is true if you are issuing
+           new CRLs every time a revocation takes place)
+
+           NOTE: Firefox/Mozilla do not parse correctly the OCSP answer in
+           case the nextUpdate field is missing. It is therefore suggested
+           to use the next_update_mins set (e.g. 5 minutes) to have mozilla's
+           software correclty work with OCSP enabled.
+      -->
+      <pki:validity>
+         <pki:days>0</pki:days>
+         <pki:mins>5</pki:mins>
+      </pki:validity>
+   </pki:response>
+</pki:serverConfig>

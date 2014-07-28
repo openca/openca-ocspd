@@ -1,0 +1,34 @@
+<?xml version="1.0" ?>
+<!-- OCSP Daemon configuration -->
+<pki:caConfig xmlns:pki="http://www.openca.org/openca/pki/1/0/0">
+   <!-- Give a meaningful name to this CA - This name will be used in the
+        logfiles -->
+   <pki:name>Dartmouth</pki:name>
+   <!-- You can embed the CA certificate in the configuration file by
+        using the caCert option and putting the PEM formatted version of
+        the certificate here -->
+   <!-- <pki:caCertValue></pki:caCertValue> -->
+   <!-- You can specify the URL where to download the CA certificate from.
+        The URL is any URL supported by LibPKI (file://, id://, http://,
+        https://, ldap://) -->
+   <!--
+   <pki:caCertUrl>ldap://ldap.dartmouth.edu:389/cn=Dartmouth CertAuth1, o=Dartmouth College, C=US, dc=dartmouth, dc=edu?cACertificate;binary</pki:caCertUrl>
+   -->
+   <pki:caCertUrl>https://collegeca.dartmouth.edu/certs/DartmouthCA.cer</pki:caCertUrl>
+   <!-- <pki:caCertUrl>/usr/local/openca-ocspd/etc/ocspd/certs/cacert.pem</pki:caCertUrl> -->
+   <pki:crlUrl>https://collegeca.dartmouth.edu/crls/collegeca.crl</pki:crlUrl>
+   <!-- Use serverCertUrl if your OCSP server has only one private
+        keypair (configured in the ocsp.xml -> token ) but different
+        certificates issued by different CAs. This is the cert that
+        will be used to generate responses for this CA -->
+   <!-- <pki:serverCertUrl></pki:serverCertUrl> -->
+   <!-- Use serverToken if your OCSP server has a full token configured
+        (private key + certificate) to be used with this CA. The serverCertUrl
+        and serverToken options are mutually exclusive, use only one! If
+        the serverToken is used, it has the precedence over the serverCertUrl
+        one -->
+   <!-- <pki:serverToken></pki:serverToken> -->
+   <!-- In case a CA is compromised, set this option to yes. All the
+        responses for this CA will carry the caCompromised flag. -->
+   <pki:caCompromised>no</pki:caCompromised>
+</pki:caConfig>

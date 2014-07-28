@@ -1,0 +1,87 @@
+# src/global-vars.in
+
+VERSION			= 3.0.0
+PACKAGE_VERSION		= 3.0.0
+TODAY			= @TODAY@
+
+etc_prefix		= $(DESTDIR)${exec_prefix}/etc
+lib_prefix		= $(DESTDIR)${exec_prefix}/lib
+var_prefix		= $(DESTDIR)${exec_prefix}/var
+doc_prefix		= $(DESTDIR)${datadir}/openca-prqpd
+
+DEST_SBINDIR		= $(DESTDIR)${exec_prefix}/sbin
+DEST_BINDIR		= $(DESTDIR)${exec_prefix}/bin
+DEST_LIBDIR		= $(DESTDIR)${exec_prefix}/lib
+DEST_DATADIR		= ${prefix}/share
+DEST_INFODIR		= ${prefix}/share/info
+DEST_MANDIR		= ${prefix}/share/man
+
+#-------- for distribution building: --------
+
+dist_user		= @dist_user@
+dist_group		= @dist_group@
+package_build		= @package_build@
+includedir		= ${exec_prefix}/include
+
+#-------- build and utility programs: --------
+
+
+SHELL			= /bin/sh
+GZIP			= @GZIP@
+TAR			= @TAR@
+PWD			= @PWD@
+## sometimes "-D -c" must be added here
+INSTALL			= ${install_sh_PROGRAM}
+MKDIR			= @MKDIR@
+CHMOD			= /bin/chmod
+CHOWN			= @CHOWN@
+ECHO			= @ECHO@
+SED			= /usr/bin/sed
+CAT			= @CAT@
+MV			= @MV@
+CP			= @CP@
+LN_S			= ln -s
+AWK			= awk
+CC			= gcc
+RM			= rm
+
+# =================================================
+
+SYSTEM_CFLAGS		= 
+SYSTEM_LIBS		= 
+
+# =================================================
+
+LIBPKI_CFLAGS		= ${sys_cflags} ${pkicflags}
+LIBPKI_LDLIBS		= ${sys_ldlibs} ${pkildlibs}
+
+# ================================================
+
+POD2MAN			= /opt/local/bin/pod2man
+
+## this is an implementation of GNU's "install -D"
+__install_dir::
+	@if test -z "$(DIR)"; then $(MAKE) default; \
+	else \
+	    if test ! -d $(DIR); then \
+		$(MAKE) __install_dir DIR=`dirname $(DIR)`; \
+		if test -n "$(MODE)"; then \
+			set -x; \
+			$(INSTALL) -d -o $(USER) -g $(GROUP) -m $(MODE) $(DIR); \
+		else \
+			set -x; \
+			$(INSTALL) -d -o $(USER) -g $(GROUP) $(DIR); \
+		fi; \
+	    fi; \
+	fi;
+
+## this is an implementation of relative linking
+## it is required to support symlink during installs
+## with DEST_DIR in use (package builds)
+__install_ln_s::
+	if test -z "$(TARGET)"; then $(MAKE) default; \
+	else \
+	    $(TOP)/relative_ln_s.sh $(TARGET) $(LINK); \
+	    chown -h $(USER):$(GROUP) $(LINK); \
+	fi;
+

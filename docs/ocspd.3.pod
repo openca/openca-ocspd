@@ -1,0 +1,117 @@
+
+=pod
+
+=head1 NAME
+
+	openca-ocspd - OCSP Daemon
+
+=head1 SYNOPSIS
+
+B<openca-ocspd>
+[B<-d>]
+[B<-p n>]
+[B<-b address>]
+[B<-c file>]
+[B<-md digest>]
+[B<-k passwd>]
+[B<-i passin>]
+[B<-e engine>]
+[B<-r chroot_dir>]
+[B<-v>]
+
+=head1 DESCRIPTION
+
+The B<openca-ocspd> is an RFC2560 compliant OCSPD responder. It can
+be used to verify the status of a certificate using OCSP clients
+(such as Mozilla/Netscape7).
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-d>
+
+detach the main process from the calling process.
+
+=item B<-p n>
+
+specifies the port to bind to. Default is 2560.
+
+=item B<-b address>
+
+specifies the IP address to bind to. Default behaviour is to listen
+to every IP available (equal to '*' value).
+
+=item B<-c file>
+
+specifies the configuration file to be loaded. Default file loaded
+is B</usr/local/etc/ocspd.conf>.
+
+=item B<-md digest>
+
+specifies the digest to be used when generating responses. Default is
+sha1.
+
+=item B<-k passwd>
+
+specifies the password to be used when loading the private key.
+
+=item B<-i passin>
+
+the key password source. For more information about the format of B<arg>
+see the B<PASS PHRASE ARGUMENTS> section in L<openssl(1)|openssl(1)>.
+
+=item B<-engine id>
+
+specifying an engine (by it's unique B<id> string) will cause the responder
+to attempt to obtain a functional reference to the specified engine,
+thus initialising it if needed. The engine will then be set as the default
+for all available algorithms.
+
+=item B<-r chroot_dir>
+
+Chroot the application into the specified directory.
+
+=item B<-v>
+
+this prints extra details about the operations being performed.
+
+=back
+
+=head1 NOTES
+
+=over 4
+
+Actually not extensive testing has been carried out, anyway this daemon
+is reported to work with Mozilla/Netscape.
+
+To reload the certificate's db simply send a SIGHUP to the main process
+( kill -s SIGHUP pid ).
+
+=back
+
+=head1 EXAMPLE
+
+=over 4
+
+	openca-ocspd -c contrib/ocspd.conf 
+
+=back
+
+=head1 AUTHOR
+
+=over 4
+
+Massimiliano Pala <madwolf@openca.org>
+
+=back
+
+=head1 SEE ALSO
+
+=over 4
+
+L<openca(3)>,L<openssl(1)>, L<ocsp(1)>
+
+=cut
+
+

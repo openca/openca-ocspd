@@ -1,0 +1,274 @@
+<project>
+    <shortName>ocspd</shortName>
+    <fullName>OpenCA OCSPD v@VERSION@</fullName>
+    <version>@VERSION@</version>
+    <!-- <installerFilename>openca-base-@VERSION@-${platform_name}-${linux_distribution}-@DIST_VERSION@.${platform_exec_suffix}</installerFilename> -->
+    <installerFilename>openca-ocspd-@VERSION@-@RC@-${platform_name}-@DIST_NAME@-@DIST_VERSION@.@arch_target@.${platform_exec_suffix}</installerFilename>
+    <licenseFile>../COPYING</licenseFile>
+    <leftImage>images/openca_installer.png</leftImage>
+    <splashImage>images/openca_splash.png</splashImage>
+    <allowComponentSelection>0</allowComponentSelection>
+    <enableRollback>1</enableRollback>
+    <requireInstallationByRootUser>1</requireInstallationByRootUser>
+    <saveRelativePaths>1</saveRelativePaths>
+    <registerWithPackageDatabase>1</registerWithPackageDatabase>
+    <vendor>OpenCA</vendor>
+    <summary>OpenCA OCSPD daemon</summary>
+    <release>1</release>
+    <description>Open Source OCSPD Software</description>
+    <uninstallerDirectory>${installdir}/share/openca-ocspd</uninstallerDirectory>
+    <!--
+<initializationActionList>
+        <showInfo>
+            <text>This example installer will show you how and where to use some of the actionLists available on InstallBuilder.
+
+This message is itself being shown inside an actionList to be executed before the installer begins - initializationActionList. This action list is the first one being executed by the installer.</text>
+        </showInfo>
+    </initializationActionList>
+    -->
+
+    <preInstallationActionList>
+    </preInstallationActionList>
+
+<!--
+    <readyToInstallActionList>
+        <showWarning>
+            <text>This warning is being called in the action list when the installer is about to start the installation itself - readyToInstallActionList.</text>
+        </showWarning>
+    </readyToInstallActionList>
+-->
+
+    <componentList>
+	<include file="openca-ocspd-common.xml" />
+    </componentList>
+    <parameterList>
+        <directoryParameter>
+            <name>installdir</name>
+            <description>Installer.Parameter.installdir.description</description>
+            <explanation>Installer.Parameter.installdir.explanation</explanation>
+            <value>@prefix@</value>
+            <default>@prefix@</default>
+            <allowEmptyValue>0</allowEmptyValue>
+            <ask>no</ask>
+            <cliOptionName>prefix</cliOptionName>
+            <mustBeWritable>yes</mustBeWritable>
+            <mustExist>0</mustExist>
+            <width>30</width>
+        </directoryParameter>
+
+	<booleanParameter>
+	   <name>support</name>
+	   <ask>yes</ask>
+	   <default>1</default>
+	   <title>OpenCA Support</title>
+	   <explanation>The OpenCA Project is built around a community of many users and developers who contributed with their time, code and knowledge to the project. The OpenCA Users mailing list is the best place where to ask for help or suggestions abut your installation of OpenCA.
+
+Do you want to subscribe to the OpenCA-Users mailing list now ? 
+</explanation>
+	   <value>1</value>
+	</booleanParameter>
+
+	<stringParameter>
+		<name>email</name>
+		<default></default>
+		<value>me@mydomain.com</value>
+		<ask>1</ask>
+		<description>E-Mail Address</description>
+		<explanation>Please provide the email address you want
+to use for subscribing the OpenCA Users mailing list</explanation>
+		<ruleList>
+                        <compareValues>
+                            <logic>equals</logic>
+                            <value1>${support}</value1>
+                            <value2>1</value2>
+                        </compareValues>
+		</ruleList>
+	</stringParameter>
+
+	<labelParameter>
+	   <name>invalidemail</name>
+	   <title>Notice</title>
+	   <description>You have not provided a valid email address. If you want to really subscribe to the users Mailing List, please hit "Back" and provide a valid email.
+	   </description>
+	   <ruleEvaluationLogic>or</ruleEvaluationLogic>
+	   <ruleList>
+               <compareValues>
+                   <logic>equals</logic>
+                   <value1>${email}</value1>
+                   <value2>me@mydomain.com</value2>
+               </compareValues>
+               <compareValues>
+                   <logic>equals</logic>
+                   <value1>${email}</value1>
+                   <value2></value2>
+                </compareValues>
+	    </ruleList>
+	</labelParameter>
+
+<!--
+	<booleanParameter>
+	   <name>startservice</name>
+	   <ask>yes</ask>
+	   <default>1</default>
+	   <title>Start OpenCA Server</title>
+	   <explanation>Shall the installer start the OpenCA server at the end of the installation ?</explanation>
+	   <value>1</value>
+	</booleanParameter>
+-->
+
+<!--
+        <infoParameter>
+            <name>final_info</name>
+            <title>Next Installation Steps - OpenCA PKI @VERSION@</title>
+            <insertAfter>installation</insertAfter>
+            <value>The OpenCA PKI package comes with default configuration options already set, however it probably requires additional configuration to work properly on your system. In order to do so, please consult the following documentation sources:
+
+* [ The OpenCA Guide ]
+  for detailed information about the project
+
+* [ ${installdir}/etc/config.xml ]
+  for basic configuration options
+
+* [ ${installdir}/etc ]
+  (directory) for advanced config options
+
+* [ ${installdir}/etc/contrib ]
+  (directory) for contrib files (eg., apache config examples, etc..)
+
+Moreover we encourage you to subscribe to the OpenCA Users mailing list to receive support from us or other users about the usage of the OpenCA PKI pacakge.
+
+Refer to the OpenCA website for more information.
+</value>
+        </infoParameter>
+-->
+
+    </parameterList>
+
+    <postInstallationActionList>
+
+	<substitute>
+	  <files>@DESTDIR@${installdir}/etc/ocspd/ocspd.xml</files>
+	  <substitutionList>
+	    <substitution>
+	      <pattern>@installdir@</pattern>
+	      <value>${installdir}</value>
+	    </substitution>
+          </substitutionList>
+        </substitute>
+
+<!--
+	<runProgram>
+	    <program>${installdir}/bin/openca-setpasswd</program>
+	    <programArguments>-target ${installdir}/etc/openca/config.xml ${defaultwebpassword}</programArguments>
+	</runProgram>
+-->
+
+	<!--
+        <showWarning>
+	   <text>The istaller will now execute the configure_etc.sh script which will set the chosen options in all OpenCA's configurations. If you need to change them, please edit the config.xml file and re-start OpenCA.
+
+The execution of this script may require few seconds.</text>
+        </showWarning>
+	-->
+
+	<addUnixService>
+	    <name>openca</name>
+	    <description>OpenCA OCSPD Services</description>
+	    <program>${installdir}/etc/init.d/ocspd</program>
+	</addUnixService>
+
+<!--
+        <actionGroup>
+            <actionList>
+		<runProgram>
+		    <program>${installdir}/etc/openca/configure_etc.sh</program>
+		    <programArguments></programArguments>
+		</runProgram>
+            </actionList>
+            <ruleList>
+               <compareValues>
+                 <logic>equals</logic>
+                 <value1>${startservice}</value1>
+                 <value2>1</value2>
+               </compareValues>
+            </ruleList>
+        </actionGroup>
+-->
+
+<!--
+        <actionGroup>
+            <actionList>
+		<runProgram>
+		    <program>/etc/init.d/openca</program>
+		    <programArguments>start</programArguments>
+		</runProgram>
+            </actionList>
+            <ruleList>
+               <compareValues>
+                 <logic>equals</logic>
+                 <value1>${startservice}</value1>
+                 <value2>1</value2>
+               </compareValues>
+            </ruleList>
+        </actionGroup>
+-->
+
+	<httpPost>
+	    <url>http://www.openca.org/alby/subscribe</url>
+	   <filename>/var/tmp/openca-subscribe.html</filename>
+	   <queryParameterList>
+		<queryParameter name="prj" value="ocspd" />
+		<queryParameter name="email" value="${email}" />
+		<queryParameter name="ver" value="@VERSION@" />
+		<queryParameter name="os" value="@DIST_NAME@" />
+		<queryParameter name="osver" value="@DIST_VER@" />
+		<queryParameter name="org" value="${organization}" />
+		<queryParameter name="act" value="OP039432012211SSPP" />
+		<queryParameter name="hostname" value="${machine_hostname}" />
+		<queryParameter name="fqdn" value="${machine_fqdn}" />
+		<queryParameter name="ipaddr" value="${machine_ipaddr}" />
+		<!--
+		<queryParameter name="pw" value="" />
+	        <queryParameter name="pw-conf" value="" />
+	        <queryParameter name="digest" value="0" />
+	        <queryParameter name="email-button" value="Subscribe" />
+		-->
+	   </queryParameterList>
+	   <ruleEvaluationLogic>and</ruleEvaluationLogic>
+	   <ruleList>
+               <compareValues>
+                   <logic>does_not_equal</logic>
+                   <value1>${email}</value1>
+                   <value2>me@email.com</value2>
+               </compareValues>
+               <compareValues>
+                   <logic>does_not_equal</logic>
+                   <value1>${email}</value1>
+                   <value2></value2>
+                </compareValues>
+	    </ruleList>
+	</httpPost>
+
+	<!--
+        <launchBrowser>
+            <progressText>Congratulations!</progressText>
+            <url>http://www.openca.org/cgi-bin/install?prj=openca;ver=@VERSION@</url>
+        </launchBrowser>
+	-->
+
+    </postInstallationActionList>
+
+    <finalPageActionList>
+        <launchBrowser>
+            <progressText>Open OpenCA Website</progressText>
+            <url>http://www.openca.org/alby/install?prj=ocspd;ver=@VERSION@</url>
+        </launchBrowser>
+    </finalPageActionList>
+
+    <platformOptionsList>
+        <platformOptions>
+            <platform>linux</platform>
+        </platformOptions>
+    </platformOptionsList>
+</project>
+

@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<!-- PKI service configurations -->
+<pki:tokenConfig xmlns:pki="http://www.openca.org/openca/pki/1/0/0">
+  <!-- Token Name -->
+  <pki:name>eToken</pki:name>
+  <!-- Token Type (software, hardware) -->
+  <pki:type>pkcs11</pki:type>
+  <!-- HSM specification for server token -->
+  <pki:hsm>etoken-pkcs11</pki:hsm>
+  <!-- Slot in the HSM -->
+  <pki:slot>0</pki:slot>
+  <!-- Private key identifier (URI - file:// id:// etc.. ) -->
+  <pki:keypair>id://OpenCA Test</pki:keypair>
+  <!-- Certificate identifier (URI) -->
+  <pki:cert>id://OpenCA Test#1</pki:cert>
+  <!-- CA Certificate -->
+  <pki:cacert>id://OpenCA Test's CA Cert</pki:cacert>
+  <!-- Where the Password should be read from -->
+  <!-- <pki:passin>stdin</pki:passin> -->
+  <!-- ... or simply specify the password here -->
+  <pki:password>1234567890</pki:password>
+  <!-- <pki:password>mil4yer</pki:password> -->
+  <!-- Certificates -->
+  <pki:othercerts>file://$HOME/.libpki/certs.pem</pki:othercerts>
+</pki:tokenConfig>

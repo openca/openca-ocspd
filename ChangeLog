@@ -1,0 +1,198 @@
+* May 10 2014 Massimiliano Pala <madwolf@openca.org>
+- Fixed issue with generating responses with hardware tokens
+- Updated support for LibPKI 0.8.5+
+
+* Oct 07 2013 Massimiliano Pala <madwolf@openca.org>
+- Fixed ocsp-genreq.sh script to correctly handle signing algorithm
+
+* Oct 07 2013 Massimiliano Pala <madwolf@openca.org>
+- Updated support for libpki 0.8.2
+- Added extra checks option for the configure (--enable-extra-checks)
+- Fixed all reported warnings
+
+* Sep 24 2013 Massimiliano Pala <madwolf@openca.org>
+- Fixed using ca-specific OCSPD server certificate (option was ignored)
+- Updated support for libpki 0.8.2 to fix HTTP GET method support
+- Updated configure.in to configure.ac script
+
+* Aug 07 2013 Massimiliano Pala <madwolf@openca.org>
+- Updated API for using OCSPD with libpki 0.8.0
+- Added signatureDigestAlgorithm option in ocspd.xml config file to force signing digest algoritm
+
+* Jun 13 2013 Massimiliano Pala <madwolf@openca.org>
+- Updated API for using OCSPD with libpki 0.7.0+
+- Improved logging for startup sequence (better report of errors during token loading)
+
+* Jul 21 2011 Massimiliano Pala <madwolf@openca.org>
+-Fixed a memory issue related to inappropriate usage of syslog() instead of
+PKI_log()
+
+* Mar 15 2011 Massimiliano Pala <madwolf@openca.org>
+-Added '-testmode' switch to set the OCSP as a test responder: all signatures are invalidated by flipping the first bit in the signature
+
+* Feb 10 2011 Massimiliano Pala <madwolf@openca.org>
+-Updated default configuration files (default passin set to none)
+-Enhanced support for ECDSA support
+
+* Feb  9 2011 Massimiliano Pala <madwolf@openca.org>
+-Updated thread management with builtin support from LibPKI 0.6.3
+-Fixed start/stop script
+-Added new method for token configuration passin -> none to avoid password
+promptin at startup
+
+* Feb  9 2011 Massimiliano Pala <madwolf@openca.org>
+-Fixed a memory error in config.c causing segfault on CRL reload
+-Set new requirements for libpki (0.6.3+)
+
+* Jan 22 2011 Massimiliano Pala <madwolf@openca.org>
+-Deleted extra two bytes sent out after the DER encoding of the response is written (that was causing Firefox/Thunderbird not to validate the answer)
+
+* Jan 14 2011 Massimiliano Pala <madwolf@openca.org>
+-Fixed an error in return code check for PKI_NET_listen.
+-Due to bug fixing in Libpki, new Requirements for libpki is v0.6.2+
+-Fixed error in config parsing when no bind address is provided
+
+* Nov 17 2010 Massimiliano Pala <madwolf@openca.org>
+-Small bug fixing
+-Tested with libpki v0.6.0
+
+* Oct 23 2010 Massimiliano Pala <madwolf@openca.org>
+-Fixed support for libpki 0.5.1
+-Fixed some errors in init scripts and default configuration files
+
+* Jun 22 2010 Massimiliano Pala <madwolf@openca.org>
+-Fixed support for LibPKI 0.5.0
+-Fixed thread-scheduling issues
+-Finished support for HTTP GET method
+-Initial support for server-side SSL support
+-Fixed certificate request script
+-Fixed default configuration options and startup script
+
+* Sep  7 2009 Massimiliano Pala <madwolf@openca.org>
+- Full support for LibPKI (4.0+)
+- Updated configuration files to XML format
+- Started to add support for GET HTTP method
+
+* Sep 03 2009 Massimiliano Pala <madwolf@openca.org>
+- Initial support for LibPKI
+- Changed configuration files (added token.d/ hsm.d/ private/ dirs)
+- Added ocspd.xml config file
+- Added separate configuration files for different CAs (in ca.d/ dir)
+
+* Dec 17 2008 Massimiliano Pala <madwolf@openca.org>
+- Fixed thread problem with OpenSSL
+- Fixed compatibilities with Java 1.6.0
+
+* Dec  3 2006 Massimiliano Pala <madwolf@openca.org>
+-Added exit message on stderr when server aborts during startup (useful
+for interactive startup of the server)
+-Added support for HTTP/1.1 "Host: <addr>" header when making HTTP
+requests in order to get data via HTTP protocol
+
+* Sun Oct 15 2006 Massimiliano Pala <madwolf@openca.org>
+-Fixed HTTP HEADERS parsing problem
+-Tested behind an Apache Proxy
+-Added '-debug' startup option to output the HTTP head and additional
+informations to be pushed to stderr
+
+* Fri Oct 13 2006 Massimiliano Pala <madwolf@openca.org>
+-Completely changed the codebase in order to use threads instead
+of fork().
+-Fixed compilation under Solaris (SunOS 5.11)
+-Added chroot() capabilities
+-Added options to set the number of threads to be pre-spawned
+-Fixed Socket creation under Solaris (Accept)
+-Moved from BIO_* interface to pure socket implementation for
+better Network options management
+
+* Tue Jul 18 2006 Massimiliano Pala <madwolf@openca.org>
+-Removed required index file option in the configuration file (was not
+used)
+
+* Mon Apr 24 2006 Massimiliano Pala <madwolf@openca.org>
+-Fixed invalidity date problem (no more empty ext added to responses)
+-Added log reporting of returned status about a response when the
+verbose switch is used (before it was enabled only in DEBUG mode)
+
+* Mon Dec 19 2005 Massimiliano Pala <madwolf@openca.org>
+-Added chroot facility to enhance server security
+
+* Thu Nov  3 2005 Massimiliano Pala <madwolf@openca.org>
+-Fixed compile against OpenSSL 0.9.8a
+-Fixed HTTP downloading routines for CRLs and CA certs
+-Fixed Solaris Port for Signal Handling on CRLs check and reloading
+
+* Thu Oct 20 2005 Massimiliano Pala <madwolf@openca.org>
+-Added extra checking on initialization of variables to avoid errors
+for ldap/http address parsing and usage
+
+* Thu Oct  6 2005 Massimiliano Pala <madwolf@openca.org>
+-Fixed variables init (for Solaris) and code cleanup
+
+* Mon Aug 29 2005 Massimiliano Pala <madwolf@openca.org>
+-Added 3rd header in response to solve a CiscoIOS problem
+
+* Wed Jun  1 2005 Massimiliano Pala <madwolf@openca.org>
+-Modified the privilege management to allow for the server to run on
+ports < 1024 under not privileged user/group
+-Fixed some Solaris signal-handling definitions
+
+* Thu Apr 28 2005 Massimiliano Pala <madwolf@openca.org>
+-Fixed RPM installation of man pages
+
+* Tue Apr 19 2005 Massimiliano Pala <madwolf@openca.org>
+-Spec file updated
+-Man pages updated with new configuration options
+-Fixed child re-spawning when HSM is active
+-Added support for CA/CRL downloading via HTTP
+
+* Fri Jan 28 2005 Massimiliano Pala <madwolf@openca.org>
+-Fixed SIGHUP problem when auto_crl_reload was enabled
+-Fixed Solaris include for flock usage instead of semaphores
+-Added --enable-flock and --enable-semaphores in configure script
+
+* Tue Jan 18 2005 Massimiliano Pala <madwolf@openca.org>
+-Fixed bug for nextUpdate and lastUpdate fields setting when reloading
+CRLs.
+-Added CA certificate loading from LDAP.
+-Added multiple CA certificate from the same cACertificate entry in LDAP.
+-Fixed Solaris putenv issues in configure.c
+-Added OS architecture specific targes in makefiles
+
+* Wed May 19 2004 Massimiliano Pala <madwolf@openca.org>
+-First support for new data structure for CRL lookup and multi CAs
+support (not working now)
+-Fixed configure.in for correct generation of config.h
+-Fixed configure.in for openldap ld options (for non-standard directories)
+
+* Mon May 17 2004 Massimiliano Pala <madwolf@openca.org>
+-Fixed compilation problems on Solaris
+-Added support for exclusion of ldap usage (--disable-openldap)
+-Added support for openldap directory specification
+-Fixed signal handling and correct children death
+-Added pre-spawning of processes()
+
+* Thu May 13 2004 Massimiliano Pala <madwolf@openca.org>
+-Fixed miscreation of responses when certificate is revoked
+-Fixed crl loading checking (segmentation fault on loading fixed)
+
+* Fri Jan 17 2003 Massimiliano Pala <madwolf@openca.org>
+-Correclty lookup using loaded CRL
+-Added extensions management from CRL to OCSP response
+
+* Mon Jan 13 2003 Massimiliano Pala <madwolf@openca.org>
+-Updated the sample (contrib/) configuration file
+-Added CRL retrivial from LDAP server
+-Added LDAP support (needs OpenLDAP libraries)
+-Added CRL retrivial from file
+
+* Oct 16 2002 Massimiliano Pala <madwolf@openca.org>
+-Added multi child spawning (max_childs_num)
+-Fixed zombi child presence
+
+* Feb 25 2002 Massimiliano Pala <madwolf@openca.org>
+-Fixed response generation
+-Added verbose information to syslog
+-Support for the index.txt db file
+-Addedd response generation related keywords in the configuration
+file

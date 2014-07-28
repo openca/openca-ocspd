@@ -1,0 +1,376 @@
+
+=pod
+
+=head1 NAME
+
+	ocspd.conf - OCSP Daemon configuration file
+
+=head1 DESCRIPTION
+
+A configuration file is divided into a number of sections. Each section
+starts with a line B<[ section_name ]> and ends when a new section is
+started or end of file is reached. A section name can consist of
+alphanumeric characters and underscores.
+
+The first section of a configuration file is special and is referred
+to as the B<default> section this is usually unnamed and is from the
+start of file until the first named section. When a name is being looked up
+it is first looked up in a named section (if any) and then the
+default section.
+
+The environment is mapped onto a section called B<ENV>.
+
+Comments can be included by preceding them with the B<#> character
+
+Each section in a configuration file consists of a number of name and
+value pairs of the form B<name=value>
+
+The B<name> string can contain any alphanumeric characters as well as
+a few punctuation symbols such as B<.> B<,> B<;> and B<_>.
+
+The B<value> string consists of the string following the B<=> character
+until end of line with any leading and trailing white space removed.
+
+The value string undergoes variable expansion. This can be done by
+including the form B<$var> or B<${var}>: this will substitute the value
+of the named variable in the current section. It is also possible to
+substitute a value from another section using the syntax B<$section::name>
+or B<${section::name}>. By using the form B<$ENV::name> environment
+variables can be substituted. It is also possible to assign values to
+environment variables by using the name B<ENV::name>, this will work
+if the program looks up environment variables using the B<CONF> library
+instead of calling B<getenv()> directly.
+
+It is possible to escape certain characters by using any kind of quote
+or the B<\> character. By making the last character of a line a B<\>
+a B<value> string can be spread across multiple lines. In addition
+the sequences B<\n>, B<\r>, B<\b> and B<\t> are recognized.
+
+=head1 NOTES
+
+If a configuration file attempts to expand a variable that doesn't exist
+then an error is flagged and the file will not load. This can happen
+if an attempt is made to expand an environment variable that doesn't
+exist. For example the default OpenSSL master configuration file used
+the value of B<HOME> which may not be defined on non Unix systems.
+
+=head1 EXAMPLE
+
+Following is a sample configuration file:
+
+=over 4
+
+ # OCSPd example configuration file.
+ # (c) 2001 by Massimiliano Pala - OpenCA Project.
+ # All rights reserved
+
+ [ ocspd ]
+ default_ocspd   = OCSPD_default
+ 
+ 
+ [ OCSPD_default ]
+
+ dir              = /usr/local/etc/ocspd
+ db               = $dir/index.txt
+ md               = sha1
+ 
+ ca_certificate    = $dir/certs/cacert.pem
+ ocspd_certificate = $dir/certs/ocspd_cert.pem
+ ocspd_key         = $dir/private/ocspd_key.pem
+ pidfile           = $dir/ocspd.pid
+ 
+ user                    = ocspd
+ group                   = daemon
+ bind                    = *
+ port                    = 2560
+ max_childs_num          = 5
+ max_req_size            = 8192
+ 
+ request          = ocsp_req
+ response         = ocsp_response
+ 
+ dbms                    = dbms_ldap     # Example using the LDAP for CRL
+                                         # retrivial
+
+ #dbms                   = dbms_file     # Example using file for CRL
+
+ engine = HSM 				 # ENGINE section
+ 
+ ####################################################################
+ [ ocsp_req ]
+ default_keyfile         = key.pem
+ 
+ ####################################################################
+ [ ocsp_response ]
+ dir                     = /usr/local/etc/ocspd
+ ocsp_add_response_certs = $dir/certs/chain_certs.pem
+ ocsp_add_response_keyid = yes
+ next_update_days        = 0
+ next_update_mins        = 5
+
+ ####################################################################
+ [ dbms_ldap ]
+
+ # It is possible to use an URI to identify a CRL and/or the
+ # CA certificate, the general format is:
+ #
+ #      [protocol]://[user[:pwd]@]server[:port]/[path]
+ #
+ # where:
+ #   protocol - specifies the protocol to be used, supported are
+ #              file, ldap, http
+ #   user     - is the user for auth (meaningful only if ldap or
+ #              http is used)
+ #   pwd      - password used for auth (meaningful only if ldap
+ #              or http is used)
+ #   port     - port to connect to (meaningful only if ldap or
+ #              http is used)
+ #   path     - complete path to the object (meaningful only if
+ #              http is used)
+ #
+ # You can have the CRLs/CA certificates on a simple file
+ #    crl_url = file:///usr/local/etc/ocspd/crl.pem
+ #
+ # You can retrieve the CRLs/CA certificates from a web server
+ #    crl_urt = http://server/ca/cacert.der
+ #
+ # You can store the CRL into an LDAP server, simply
+ # store it in certificateRevocationList;binary attribute
+ #
+ # There are different way, all legal, to specify the CRL
+ # URL address:
+ # crl_url = ldap://user:pwd@ldap.server.org:389
+ # crl_url = ldap://ldap.server.org:389
+ crl_url = ldap://localhost
+
+ # The CRL entry DN is the DN to look for when retrieving the
+ # date from the LDAP server. Put here the complete DN (usually
+ # the DN of the CA's certificate).
+ crl_entry_dn = "email=email@address, cn=Certification Auth, \
+                                             o=Organization, c=IT"
+
+ ####################################################################
+ [ dbms_file ]
+
+ # You can have the CRL on a simple file in PEM format
+ crl_url = file:///usr/local/etc/ocspd/crl.pem
+
+ [ HSM ]
+ # Hardware accelerators support via the ENGINE interface
+ engine_id = MyAccelerator
+ 0.engine_pre = login:1:10:11:myPassword
+ # 0.engine_post = logout:1:10:11
+
+=back
+
+Let's analyze the options in detail.
+
+=over 6
+
+=item B<default_ocspd section>
+
+In this section of the configuration file are set the general options
+used by the responder, some of which are available using the command
+line options too ( see L<ocspd(3)>).
+
+=item B<dir>
+
+specifies the directory where everything is kept.
+
+=item B<db>
+
+specifies the db where info about issued certificates are kept. Right
+now the only supported file format is the one from B<L<openssl(1)>>.
+To reload the certificate's db simply send a SIGHUP to the main process
+( kill -s SIGHUP pid ).
+
+=item B<md>
+
+specifies the digest to be used. Default is sha1.
+
+=item B<ca_certificate>
+
+path to the CA's certificate.
+
+=item B<ocspd_certificate>
+
+path to the certificate to be used by the responder.
+
+=item B<ocspd_key>
+
+path to the private key file to be used by the responder.
+
+=item B<pidfile>
+
+path to the pid file where the responder will write its pid when
+starting.
+
+=item B<user>
+
+user id the responder will try to run as, this must be a valid UID.
+If not specified the responder will run as the user who started the
+daemon.
+
+=item B<group>
+
+group id the responder will try to run as, this must be a valid GID.
+If not specified the responder will run as the user who started the
+daemon.
+
+=item B<bind>
+
+address to listen to. You can force the responder to listen to just
+one of the available addresses. If you want the responder to listen
+to every available interface, simply use '*' (default).
+
+=item B<port>
+
+specifies the port to listen to.
+
+=item B<threads_num>
+
+Number of threads that shall be created at startup time, the
+more threads, the better for handling very high traffic. We
+expect to have better performances on multi-threaded machines
+and processors.
+
+From version 1.5+ the server is not pre-forked, instead it is
+a pre-threaded one. In order to run the server needs support
+for POSIX1.c as found in most modern UNiX systems.
+
+=item B<chroot_dir>
+
+Chroot the application into the specified directory, watch
+out because if you chroot the application, all the paths
+should be relative to the new root for CRL reloading or
+(better solution) you have to download the CRLs from HTTP or
+LDAP. If you chroot and you do not provide support for
+privileges dropping, privileges will not be dropped and an
+error will be written in the logfile, but the server will
+continue to run assuming the chroot() is sufficiently isolated
+to prevent abuse of the machine.
+
+=item B<max_req_size>
+
+maximum size of received request, if a received request is bigger it
+will be trashed. Usually simple requests are 200/300 bytes long (more
+or less).
+
+=item B<request section>
+
+Currently not used
+
+=item B<response section>
+
+Here are kept options tied to responses' building.
+
+=item B<dbms section>
+
+Here are kept options tied to the revoked certificates' list.
+
+=over 4
+
+=item B<ocsp_add_response_certs>
+
+specifies path to a file containing certificates to be added to the
+response (usually the whole certification chain). Certificates have to
+be in PEM format one after another (a simple cat of the certificates
+will do fine).
+
+=item B<ocsp_add_response_keyid>
+
+specifies if adding of the key id to the response.
+
+=item B<next_update_days>
+
+specifies the number of days till next update is available. A
+response will be valid in the period following the request till
+the days+mins.
+
+=item B<next_update_mins>
+
+specifies the number of minutes till next update is available. A
+response will be valid in the period following the request till
+the days+mins.
+
+=item B<ca_url>
+
+specifies the URI where the CA certificate (which identifies the
+single CA) is located. Three different protocols are implemented
+( file:// http:// or ldap:// ). If file is chosen, then the parameter
+should carry the path to the CA file (i.e. file:///usr/local/etc/ca.pem).
+If ldap or http is chosen, you can specify the address, and the port
+of the server where to connect to (i.e. ldap://server.addr:port).
+
+=item B<crl_url>
+
+specifies the URI where the CRL (list of revoked certificates,
+actually used for building responses) is located. Three different
+protocols are actually implemented ( file:// http:// or ldap:// ).
+If file is chosen, then the parameter should have the path to the
+crl file (i.e. file:///usr/local/etc/cacrl.pem). If ldap or http
+is chosen, you can specify the address, and the port of the
+server where to connect to (i.e. ldap://server.addr:port).
+
+=item B<crl_entry_dn>
+
+specifies, if ldap:// protocol is chosen within the B<crl_url>
+parameter, the entry where to look for the certificateRevocationList
+attribute where the CRL should be present (usually this is also
+the base of the LDAP tree, but different installations are also
+possible).
+
+=back
+
+=item B<ENGINE section>
+
+=over 6
+
+=item B<engine_id>
+
+Specifies the ENGINE id to be used - check OpenSSL and your HSM
+vendor to get more info about this parameter.
+
+=item B<engine_pre>
+
+Some HSM need initialisation before access to the crypto accelerated
+functions is granted. It is possible, by using the 'engine_pre' options
+to issue needed commands directly to the HSM.
+
+The format is as follows:
+   0.engine_pre = cmd:values
+   1.engine_pre = cmd2:values
+   ...
+It is possible to have as many commands as needed.
+
+=item B<engine_post>
+
+Some HSMs need to perform commands after the ENGINE initialisation
+which are taken from the 'engine_post' option. Usage and format
+is exactly the same as 'engine_pre', the difference is that commands
+are sent to the HSM after the ENGINE_init() function. Refer to your
+HSM documentation for more informations
+
+=back
+
+=back
+
+=head1 AUTHOR
+
+=over 4
+
+Massimiliano Pala <madwolf@openca.org>
+
+=back
+
+=head1 SEE ALSO
+
+=over 4
+
+L<ocspd(3)>,L<openca(3)>,L<openssl(1)>, L<ocsp(1)>
+
+=back
+
+=cut
+
+

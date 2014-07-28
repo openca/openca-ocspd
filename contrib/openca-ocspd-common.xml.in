@@ -1,0 +1,103 @@
+        <component>
+            <name>common</name>
+            <description>Common Components</description>
+            <canBeEdited>0</canBeEdited>
+            <selected>1</selected>
+            <show>1</show>
+            <folderList>
+                <folder>
+                    <description>Common Bin</description>
+                    <destination>${installdir}</destination>
+                    <name>commonbin</name>
+                    <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/bin</origin>
+                        </distributionDirectory>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Common sBin</description>
+                    <destination>${installdir}</destination>
+                    <name>commonsbin</name>
+                    <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/sbin</origin>
+                        </distributionDirectory>
+                    </distributionFileList>
+<!--
+		    <actionList>
+			<changeOwnerAndGroup>
+			    <owner>@ocspd_user@</owner>
+			    <group>@ocspd_group@</group>
+			    <files>${installdir}</files>
+			</changeOwnerAndGroup>
+		    </actionList>
+-->
+                </folder>
+                <folder>
+                    <description>Common Libs</description>
+                    <destination>${installdir}/share</destination>
+                    <name>commonshare</name>
+                    <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/share</origin>
+                        </distributionDirectory>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Common Var</description>
+                    <destination>${installdir}/var</destination>
+                    <name>commonvar</name>
+                    <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/var</origin>
+                        </distributionDirectory>
+                    </distributionFileList>
+                </folder>
+<!--
+		    <actionList>
+			<changeOwnerAndGroup>
+			    <owner>@httpd_user@</owner>
+			    <group>@httpd_group@</group>
+			    <files>${installdir}/var/openca;${installdir}/var/openca/*;${installdir}/var/openca/*/*;${installdir}/var/openca/*/*/*</files>
+			</changeOwnerAndGroup>
+		    </actionList>
+                </folder>
+-->
+                <folder>
+                    <description>config</description>
+                    <destination>${installdir}/etc/ocspd</destination>
+                    <name>etc</name>
+                    <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/etc/ocspd/certs</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/etc/ocspd/ca.d</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/etc/ocspd/pki</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/etc/ocspd/private</origin>
+                        </distributionDirectory>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>init dir</description>
+                    <destination>${installdir}/etc</destination>
+                    <name>init</name>
+                    <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>@DESTDIR@@prefix@/etc/init.d</origin>
+                        </distributionDirectory>
+                    </distributionFileList>
+                </folder>
+            </folderList>
+        </component>
