@@ -19,7 +19,7 @@
 
 extern OCSPD_CONFIG *ocspd_conf;
 
-PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf) 
+PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 {
 	PKI_X509_OCSP_REQ 	*req = NULL;
 	PKI_X509_OCSP_REQ_VALUE *req_val = NULL;
@@ -60,7 +60,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 			PKI_log_err("Malformed GET request");
 			goto err;
 		}
-		
+
 		req_pnt = http_msg->path;
 		while(strchr(req_pnt, '/') != NULL)
 		{
@@ -82,15 +82,28 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 			goto err;
 		}
 
-		// pathmem not needed anymore, let's free the memory
-		PKI_MEM_free(pathmem);
-		pathmem = NULL;
-
 		if (PKI_MEM_B64_decode(b64mem, 76) == PKI_ERR )
 		{
 			PKI_log_err ("Error decoding B64 Mem");
 			PKI_MEM_free ( b64mem );
-			goto err;
+			b64mem = NULL;
+			req_pnt = http_msg->path;
+			while(req_pnt[0] == '/')
+			{
+				req_pnt=req_pnt + 1;
+			}
+			b64mem = PKI_MEM_new_data(strlen(req_pnt), (unsigned char *) req_pnt);
+			if (b64mem == NULL)
+			{
+				PKI_log_err("Memory Allocation Error!");
+				goto err;
+			}
+			if (PKI_MEM_B64_decode(b64mem, 76) == PKI_ERR )
+			{
+				PKI_log_err ("Error decoding B64 Mem");
+				PKI_MEM_free ( b64mem );
+				goto err;
+			}
 		}
 
 		if((mem = BIO_new_mem_buf(b64mem->data, (int) b64mem->size )) == NULL)
@@ -107,7 +120,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		PKI_MEM_free ( b64mem );
 		BIO_free (mem);
 
-	} 
+	}
 	else if ( http_msg->method == PKI_HTTP_METHOD_POST)
 	{
 		mem = BIO_new_mem_buf(http_msg->body->data, (int) http_msg->body->size);
@@ -124,7 +137,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 			}
 			BIO_free (mem);
 		}
-	} 
+	}
 	else
 	{
 		PKI_log_err ( "HTTP Method not supported");
@@ -149,4 +162,3 @@ err:
 
 	return NULL;
 }
-
