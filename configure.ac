@@ -28,7 +28,7 @@ AC_CONFIG_AUX_DIR(build)
 AC_CONFIG_MACRO_DIR([m4])
 
 mybits=""
-if [[ `uname -p` = "x86_64" ]] ; then
+if [[ `uname -m` = "x86_64" ]] ; then
 	mybits="64";
 fi
 AC_SUBST(mybits)
@@ -242,6 +242,10 @@ if [[ "$CC" = "gcc" ]] ; then
 		AC_CHECK_C_OPTION(-Wall)
 	fi
 
+       if [[ "$DIST_NAME" = "darwin" ]] ; then
+                AC_CHECK_C_OPTION(-Wno-deprecated)
+        fi
+
 	dnl AC_CHECK_C_OPTION(-m64)
 	dnl AC_CHECK_C_OPTION(-rdynamic)
 	dnl AC_CHECK_C_OPTION(--export-dynamic)
@@ -388,7 +392,7 @@ if test x${debug} = xtrue ; then
 fi
 
 if [[ x${prefix} = xNONE ]]; then
-	prefix="/usr/local";
+	prefix="/usr";
 fi
 
 dnl OpenCA prefix

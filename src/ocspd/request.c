@@ -26,7 +26,6 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 
 	PKI_IO			*mem = NULL;
 	PKI_MEM			*pathmem = NULL;
-	PKI_MEM 		*b64mem = NULL;
 
 	PKI_SOCKET		sock;
 
@@ -74,41 +73,40 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 			goto err;
 		}
 
-		if((b64mem = PKI_MEM_url_decode (pathmem, 0)) == NULL)
+		if(PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_URL, 0) != PKI_OK)
 		{
 			PKI_log_err("Memory Allocation Error!");
 			PKI_MEM_free(pathmem);
-			pathmem = NULL; // Safety
 			goto err;
 		}
 
-		// pathmem not needed anymore, let's free the memory
-		PKI_MEM_free(pathmem);
-		pathmem = NULL;
-
-		if (PKI_MEM_B64_decode(b64mem, 76) == PKI_ERR )
+		if (PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_B64, 76) != PKI_OK)
 		{
 			PKI_log_err ("Error decoding B64 Mem");
-			PKI_MEM_free ( b64mem );
+			PKI_MEM_free (pathmem);
 			goto err;
 		}
 
-		if((mem = BIO_new_mem_buf(b64mem->data, (int) b64mem->size )) == NULL)
+		// Generates a new mem bio from the pathmem
+		if((mem = BIO_new_mem_buf(pathmem->data, (int) pathmem->size)) == NULL)
 		{
 			PKI_log_err("Memory Allocation Error");
-			PKI_MEM_free ( b64mem );
+			PKI_MEM_free(pathmem);
 			goto err;
 		}
 
+		// Tries to decode the binary (der) encoded request
 		if((req_val = d2i_OCSP_REQ_bio(mem, NULL)) == NULL ) {
 				PKI_log_err("Can not parse REQ");
 		}
 
-		PKI_MEM_free ( b64mem );
-		BIO_free (mem);
+		// Let's free the mem
+		BIO_free(mem);
 
+		// Let's free the pathmem
+		PKI_MEM_free(pathmem);
 	} 
-	else if ( http_msg->method == PKI_HTTP_METHOD_POST)
+	else if (http_msg->method == PKI_HTTP_METHOD_POST)
 	{
 		mem = BIO_new_mem_buf(http_msg->body->data, (int) http_msg->body->size);
 		if (mem == NULL)

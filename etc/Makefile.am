@@ -1,9 +1,13 @@
 ## Process this file with automake to produce Makefile.in
 
 TOP = ..
-include $(TOP)/src/global-vars
 
 CHMOD = @CHMOD@
+
+etc_prefix		= $(DESTDIR)${exec_prefix}/etc
+lib_prefix		= $(DESTDIR)@libdir@
+var_prefix		= $(DESTDIR)${exec_prefix}/var
+doc_prefix		= $(DESTDIR)${datadir}/openca-prqpd
 
 EXTRA_DIST = ocspd.xml.in ocspd.in ca.d/*.xml
 

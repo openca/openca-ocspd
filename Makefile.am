@@ -3,8 +3,8 @@
 # © 2001-2009 by Massimiliano Pala and OpenCA Labs
 
 VERSION			= @VERSION@
-PKG_VER		= @PKG_VER@
-PKG_MIN		= @PKG_MIN@
+PKG_VER			= @PKG_VER@
+PKG_MIN			= @PKG_MIN@
 PACKAGE_NAME		= @PACKAGE_NAME@
 
 #-------- installation paths: --------
@@ -90,6 +90,9 @@ install-data-local:
 	@$(mkinstalldirs) $(DESTDIR)$(exec_prefix)/var
 	@$(mkinstalldirs) $(DESTDIR)$(exec_prefix)/var/run
 
+distclean-local:
+	@rm -rf autom4te.cache
+
 ########################################################
 ##               BEGIN RELEASE STUFF                  ##
 ########################################################
@@ -164,16 +167,6 @@ rpm:
 		sudo mv $(HOME)/tmp/rpm/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null || \
 		sudo mv $(HOME)/rpmbuild/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null ; \
 	echo
-
-#	echo "Building source package... " ; \
-#	$(MAKE) -f $(MAKEFILE) dist ; \
-#	echo "Building RPM package(s)... " ; \
-#	rm -rf /usr/src/redhat/BUILD/$(PACKAGE_NAME)* ; \
-#	rpmbuild -ta $(PACKAGE_NAME)-$(PKG_VER).tar.gz ; \
-#	mv /usr/src/redhat/RPMS/*/$(PACKAGE_NAME)*.rpm . ; \
-#	mv /usr/src/redhat/SRPMS/$(PACKAGE_NAME)*.src.rpm . ; \
-#	echo
-
 
 pkgbuild:
 	@rm -rf /tmp/$(PACKAGE_NAME)-build-$(VERSION)
