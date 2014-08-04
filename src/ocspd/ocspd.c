@@ -38,8 +38,9 @@ char *version = VERSION;
 OCSPD_CONFIG *ocspd_conf = NULL;
 
 /* Local functions prototypes */
-int writePid ( int pid, char *pidfile );
-void my_exit ( int cod, char *txt );
+int  writePid(int pid, char *pidfile);
+void my_exit(int cod, char *txt);
+void mask_signals();
 
 /* Main */
 int main ( int argc, char *argv[] ) {
@@ -149,6 +150,10 @@ bad:
 		writePid( ppid, ocspd_conf->pidfile );
 	}
 
+	// Mask un-wanted signals
+	mask_signals();
+
+	// Let's now start the threaded server
 	start_threaded_server( ocspd_conf );
 
 	goto end;
@@ -181,6 +186,20 @@ int writePid ( int pid, char *pidfile ) {
 	fclose( fd );
 
 	return(1);
+}
+
+void mask_signals()
+{
+	struct sigaction sa;
+
+	sa.sa_handler = SIG_IGN;
+	sa.sa_flags = 0;
+
+	if (sigaction(SIGPIPE, &sa, 0) == -1)
+	{
+		PKI_log(PKI_LOG_ERR, "Can not mask SIGPIPE, aborting!\n\n");
+		exit(1);
+	}
 }
 
 void my_exit(int cod, char *txt) {

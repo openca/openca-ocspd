@@ -42,18 +42,21 @@ void * thread_main ( void *arg ) {
 			"created [%d]", thread_nr);
 	}
 
-	sa.sa_handler = SIG_IGN;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
+	// PThread specific SIGPIPE handling
+	sigset_t sigpipe_mask;
+	sigset_t saved_mask;
 
-	if (sigaction(SIGPIPE, &sa, NULL) == -1) {
-		perror("Error during handling the death processes");
-		exit(1);
-	}
+	// Let's initialize the sigpipe mask
+	sigemptyset(&sigpipe_mask);
 
-	if (sigaction(SIGPIPE, &sa, NULL) == -1) {
-		PKI_log( PKI_LOG_ERR, "Error during handling the death processes");
-		exit(1);
+	// Let's add the SIGPIPE to the mask
+	sigaddset(&sigpipe_mask, SIGPIPE);
+
+	// Prevent the server to die in case of a write to a prematurely
+	// closed socket
+	if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) == -1) {
+	  PKI_log_err("Can not block SIGPIPE signal!");
+	  exit(1);
 	}
 
 	for ( ; ; ) {

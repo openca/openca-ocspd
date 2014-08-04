@@ -80,7 +80,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 			goto err;
 		}
 
-		if (PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_B64, 76) != PKI_OK)
+		if (PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_B64, 0) != PKI_OK)
 		{
 			PKI_log_err ("Error decoding B64 Mem");
 			PKI_MEM_free (pathmem);
@@ -95,6 +95,10 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 			goto err;
 		}
 
+		// Transfer data ownership and release the pathmem
+		pathmem->data = NULL;
+		pathmem->size = 0;
+
 		// Tries to decode the binary (der) encoded request
 		if((req_val = d2i_OCSP_REQ_bio(mem, NULL)) == NULL ) {
 				PKI_log_err("Can not parse REQ");
@@ -102,8 +106,6 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 
 		// Let's free the mem
 		BIO_free(mem);
-
-		// Let's free the pathmem
 		PKI_MEM_free(pathmem);
 	} 
 	else if (http_msg->method == PKI_HTTP_METHOD_POST)
