@@ -1,7 +1,7 @@
 /* file: src/ocspd/ocspd.c
  * ==================================================================
  * OCSP responder - Massimiliano Pala (madwolf@openca.org)
- * Copyright (c) 2001-2013 The OpenCA Labs.
+ * Copyright (c) 2001-2014 The OpenCA Labs.
  * All rights reserved.
  * ==================================================================
  */
@@ -11,13 +11,13 @@
 static char *ocspd_warning = 
 "\n"
 "OpenCA's OCSP Responder - v%s\n"
-"(c) 2002-2013 by Massimiliano Pala and OpenCA Project\n"
+"(c) 2002-2014 by Massimiliano Pala and OpenCA Project\n"
 "    OpenCA licensed software\n"
 "\n";
 
 static char *ocspd_usage[] = {
 "OCSPD - OpenCA OCSP responder daemon\n",
-"(c) 2002-2013 by Massimiliano Pala and OpenCA Project\n",
+"(c) 2002-2014 by Massimiliano Pala and OpenCA Project\n",
 "\n",
 "   USAGE: ocspd args\n",
 "\n",

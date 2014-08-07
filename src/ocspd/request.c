@@ -45,7 +45,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 	{
 		PKI_log_err ("Network Error while reading Request!");
 		return NULL;
-	};
+	}
 
 	/* If method is METHOD_GET we shall de-urlify the buffer and get the
 	   right begin (keep in mind there might be a path set in the config */
@@ -73,7 +73,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 			goto err;
 		}
 
-		if(PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_URL, 0) != PKI_OK)
+		if (PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_URL, 0) != PKI_OK)
 		{
 			PKI_log_err("Memory Allocation Error!");
 			PKI_MEM_free(pathmem);
@@ -100,12 +100,17 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		pathmem->size = 0;
 
 		// Tries to decode the binary (der) encoded request
-		if((req_val = d2i_OCSP_REQ_bio(mem, NULL)) == NULL ) {
-				PKI_log_err("Can not parse REQ");
+		if ((req_val = d2i_OCSP_REQ_bio(mem, NULL)) == NULL)
+		{
+			PKI_log_err("Can not parse REQ");
+			BIO_free(mem);
+			PKI_MEM_free(pathmem);
+			goto err;
 		}
 
 		// Let's free the mem
 		BIO_free(mem);
+
 		PKI_MEM_free(pathmem);
 	} 
 	else if (http_msg->method == PKI_HTTP_METHOD_POST)
@@ -145,6 +150,8 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 	return (req);
 
 err:
+	if (req) PKI_X509_OCSP_REQ_free(req);
+
 	if (http_msg) PKI_HTTP_free(http_msg);
 
 	return NULL;

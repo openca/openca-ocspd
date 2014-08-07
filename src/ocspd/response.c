@@ -10,6 +10,181 @@
 
 pthread_mutex_t sign_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+typedef enum {
+	OCSPD_INFO_UNKNOWN_STATUS     = 0,
+	OCSPD_INFO_VALID_CERT         = 1,
+	OCSPD_INFO_NON_RECOGNIZED_CA  = 2,
+	OCSPD_INFO_NON_VALID_CRL      = 3,
+	OCSPD_INFO_REVOKED            = 4
+} OCSPD_INFO_TYPE;
+
+static const char *statusInfo[] = {
+		"unknown certificate status",
+		"valid certificate status",
+		"request for non recognized CA",
+		"unknown status due to invalid CRL status",
+		"certificate revoked",
+		NULL
+};
+
+int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CERT *signCert, PKI_X509_CERT *caCert)
+{
+	PKI_TOKEN *tk = NULL;
+
+	PKI_DIGEST_ALG *sign_dgst = NULL;
+
+	int sig_rv = PKI_OK;
+
+	// Input Checks
+	if (!resp || !conf) return PKI_ERR;
+
+	// Let's get the default token for signing
+	if ((tk = conf->token) == NULL)
+	{
+		PKI_log_err("CA Token is empty, can not sign response!");
+		return PKI_ERR;
+	}
+
+	// Sign the response only if we have a valid pkey pointer!
+	if (PKI_TOKEN_get_keypair(tk) == NULL)
+	{
+		PKI_log_err("Can not sign responses - no valid keyPair was configured");
+		return PKI_ERR;
+	}
+
+	// If no cert is provided but we have the token, let's get it from
+	// the token. If no cert is in the token, let's abort signing
+	if (signCert == NULL && (signCert = PKI_TOKEN_get_cert(tk)) == NULL)
+		PKI_log(PKI_LOG_WARNING, "No signing certificate for OCSP response signing");
+
+	if (caCert == NULL && ((caCert = PKI_TOKEN_get_cacert(tk)) == NULL))
+		PKI_log(PKI_LOG_WARNING, "No CA certificate for OCSP response signing");
+
+	// It seems that CISCO devices require the SHA1 algorithm to be
+ 	// used. Make sure you use that in the configuration for the digest
+	if (conf->sigDigest)
+		sign_dgst = conf->sigDigest;
+	else
+		sign_dgst = PKI_ALGOR_get_digest(tk->algor);
+
+	// Some debugging information
+	if (conf->debug)
+	{
+		if (sign_dgst)
+			PKI_log_debug("Digest Algorithm For Signature: %s", PKI_DIGEST_ALG_get_parsed(sign_dgst));
+		else
+			PKI_log_err("Can not parse the Digest Algorithm for Signatures!");
+
+		if (signCert)
+		{
+			char *subject = PKI_X509_CERT_get_parsed(signCert, PKI_X509_DATA_SUBJECT);
+			char *issuer = PKI_X509_CERT_get_parsed(signCert, PKI_X509_DATA_ISSUER);
+			char *serial = PKI_X509_CERT_get_parsed(signCert, PKI_X509_DATA_SERIAL);
+
+			PKI_log_debug("Using CA-Specific Configured Certificate:");
+			PKI_log_debug("- Serial: %s", serial ? serial : "n/a");
+			PKI_log_debug("- Subject: %s", subject ? subject : "n/a");
+			PKI_log_debug("- Issuer: %s", issuer ? issuer : "n/a");
+
+			if (serial) PKI_Free(serial);
+			if (subject) PKI_Free(subject);
+			if (issuer) PKI_Free(issuer);
+		}
+	}
+
+	// Now generate the signature for the response
+	sig_rv = PKI_X509_OCSP_RESP_sign(resp, tk->keypair, signCert, caCert, tk->otherCerts, sign_dgst);
+
+	// Checks the return code and report the error (if any)
+	if (sig_rv != PKI_OK)
+	{
+		PKI_log_err("Failed while signing [%s]", PKI_ERROR_crypto_get_errdesc());
+		return PKI_ERR;
+	}
+
+	if (conf->debug) PKI_log_debug ("Response signed successfully");
+
+	// Test Mode: Issues WRONG signatures by flipping the first
+ 	// bit in the signature. Use it ONLY for testing OCSP clients
+ 	// verify capabilities!
+	if (conf->testmode)
+	{
+		PKI_STRING *signature = NULL;
+
+		PKI_log(PKI_LOG_ALWAYS,
+			"WARNING: TestMode (Wrong Signatures): Flipping first bit in Signature");
+
+		// Get The Signature
+		signature = PKI_X509_OCSP_RESP_get_data(resp, PKI_X509_DATA_SIGNATURE);
+		if (signature)
+		{
+			PKI_X509_OCSP_RESP_VALUE *resp_val = NULL;
+  			PKI_OCSP_RESP *r = NULL;
+			OCSP_BASICRESP *bsrp = NULL;
+
+			int i = 0;
+
+			// Flip The First n-Bit of the Signature (n=1)
+			for (i=0; i < 1; i++ )
+			{
+				if(ASN1_BIT_STRING_get_bit(signature, i))
+    				ASN1_BIT_STRING_set_bit(signature, i, 0);
+    			else
+    				ASN1_BIT_STRING_set_bit(signature, i, 1);
+			}
+
+			r = resp->value;
+
+			// Now we need to re-encode the basicresp
+		  	resp_val = r->resp;
+			bsrp = r->bs;
+
+			if (resp_val->responseBytes)
+				OCSP_RESPBYTES_free(resp_val->responseBytes);
+
+			if (!(resp_val->responseBytes = OCSP_RESPBYTES_new()))
+			{
+				PKI_log_err("Memory Error, aborting signature mangling!");
+ 				return PKI_ERR;
+			}
+
+			// Sets the OCSP basic bit
+			resp_val->responseBytes->responseType = OBJ_nid2obj(NID_id_pkix_OCSP_basic);
+
+			if (bsrp)
+			{
+				/* Now add the encoded data to the request bytes */
+				if (!ASN1_item_pack(bsrp, ASN1_ITEM_rptr(OCSP_BASICRESP),
+												&resp_val->responseBytes->response))
+				{
+					PKI_log_err("ERROR while encoding OCSP RESP");
+					return ( PKI_ERR );
+				}
+			}
+		}
+		else
+		{
+			if (conf->debug) PKI_log_debug("Test Mode: Signature Not Found!");
+		}
+	}
+
+	// Success
+	return PKI_OK;
+}
+
+PKI_X509_OCSP_RESP *make_error_response(PKI_X509_OCSP_RESP_STATUS status)
+{
+	PKI_X509_OCSP_RESP *resp = NULL;
+
+	if ((resp = PKI_X509_OCSP_RESP_new()) != NULL)
+	{
+		// Sets the MALFORMED status for the response
+		PKI_X509_OCSP_RESP_set_status(resp, status);
+	}
+
+	return resp;
+}
+
 PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *conf )
 {
 	OCSP_CERTID *cid = NULL;
@@ -18,8 +193,9 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	PKI_X509_OCSP_REQ_VALUE *req_val = NULL;
 
 	PKI_TOKEN *tk = NULL;
-	PKI_X509_CERT *cert = NULL;
-	PKI_X509_CERT *cacert = NULL;
+
+	PKI_X509_CERT *signCert = NULL;
+	PKI_X509_CERT *caCert = NULL;
 
 	int i, id_count;
 
@@ -29,38 +205,48 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	PKI_TIME *thisupd = NULL;
 	PKI_TIME *nextupd = NULL;
 
-	if((resp = PKI_X509_OCSP_RESP_new()) == NULL )
+	char *parsedSerial = NULL;
+
+	// Checks if we have a valid request, if not, we just send back
+	// a response for a malformed request
+	if (req == NULL || (req_val = PKI_X509_get_value(req)) == NULL)
 	{
-		PKI_log_err ( "Memory Error" );
+		// Gets the response for a MALFORMED request
+		resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_MALFORMEDREQUEST);
+
+		// Let's go to the end
 		goto end;
 	}
 
-	if ((req_val = PKI_X509_get_value ( req )) == NULL)
-	{
-		PKI_log_err ( "Memory Error" );
-		goto end;
-	}
-
-	id_count = OCSP_request_onereq_count( req_val );
-
-	if (id_count <= 0)
+	// Let's get the number of requests in the OCSP req
+	if ((id_count = OCSP_request_onereq_count(req_val)) <= 0)
 	{
 		unsigned long error_num = HSM_get_errno(conf->token ? conf->token->hsm : NULL);
 
-		PKI_log_err("[Thread] ERROR::Request has no onereq (Crypto Error is %ld::%s)",
+		PKI_log_err("Request has no internal OneReq (Crypto Error is %ld::%s)",
 			errno, HSM_get_errdesc(error_num, conf->token ? conf->token->hsm : NULL));
 
-		PKI_X509_OCSP_RESP_set_status (resp, PKI_X509_OCSP_RESP_STATUS_MALFORMEDREQUEST);
-
+		// Let's generate the appropriate error response
+		resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_MALFORMEDREQUEST);
 		goto end;
+	}
+
+	// Now allocates the memory for the response
+	if((resp = PKI_X509_OCSP_RESP_new()) == NULL )
+	{
+		PKI_log_err("Memory Error: can not allocate a new OCSP response");
+		return NULL;
 	}
 
 	/* Let's set the default token for signing */
 	tk = conf->token;
 
-	// Next update (if specified in the config)
+	// Next update (if specified in the configuration)
 	if (conf->set_nextUpdate)
 		nextupd = PKI_TIME_new((conf->nmin * 60 ) + (conf->ndays * 86400));
+
+	// Gets the reference to the "now" time
+	thisupd = PKI_TIME_new(0);
 
 	/* Examine each certificate id in the request */
 	for (i = 0; i < id_count; i++)
@@ -73,31 +259,31 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		one = OCSP_request_onereq_get0(req_val, i);
 		cid = OCSP_onereq_get0_id(one);
 
+		if (conf->verbose || conf->debug)
+		{
+			if (parsedSerial) PKI_Free(parsedSerial);
+			parsedSerial = PKI_INTEGER_get_parsed(serial);
+		}
+
 		/* Get basic request info */
 		OCSP_id_get0_info(NULL, NULL, NULL, &serial, cid);
 
-		if (conf->verbose)
-		{
-			char *s = PKI_INTEGER_get_parsed ( serial );
-			PKI_log( PKI_LOG_INFO, "request for certificate serial %s", s);
-			if( s ) PKI_Free ( s );
-		}
+		if (conf->debug)
+			PKI_log( PKI_LOG_INFO, "request for certificate serial %s", parsedSerial);
 
 		/* Is this request about our CA? */
 		if ((ca = OCSPD_CA_ENTRY_find( conf, cid )) == NULL)
 		{
 			if (conf->verbose)
-			{
-				char *s = PKI_INTEGER_get_parsed ( serial );
-				PKI_log( PKI_LOG_INFO, "request for non reckognized CA [serial %s]", s );
-				if( s ) PKI_Free ( s );
-			}
+				PKI_log(PKI_LOG_INFO, "%s [serial %s]",
+					statusInfo[OCSPD_INFO_NON_RECOGNIZED_CA], parsedSerial);
 
+			// Adds the single response to the response container
 			PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN,
 					NULL, NULL, nextupd, 0, NULL );
 
-			/* Maybe we could add the serviceLocator extension
- 			   we can use the PRQP to find out the server address */
+			// TODO: Maybe we could add the serviceLocator extension
+ 			//       we can use the PRQP to find out the server address
 
 			continue;
 		}
@@ -106,11 +292,10 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		if (ca->token != NULL)
 		{
 			tk = ca->token;
+
 			if (conf->debug)
-			{
 				PKI_log_debug( "Using the specific token for the found CA (%s)",
 					ca->token_name);
-			}
 		}
 		else
 		{
@@ -118,38 +303,31 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
  			 * is to be used, let's report it in debug mode */
 			if (ca->server_cert)
 			{
-				cert = ca->server_cert;
-
-				use_server_cert = 1;
+				signCert = ca->server_cert;
 
 				if (ca->ca_cert)
-				{
-					use_server_cacert = 1;
-					cacert = ca->ca_cert;
-				}
-
-				if (conf->debug)
-				{
-					char *subject = PKI_X509_CERT_get_parsed(cert, PKI_X509_DATA_SUBJECT);
-					char *issuer = PKI_X509_CERT_get_parsed(cert, PKI_X509_DATA_ISSUER);
-					char *serial = PKI_X509_CERT_get_parsed(cert, PKI_X509_DATA_SERIAL);
-
-					PKI_log_debug("Using CA-Specific Config specified cert:", subject);
-					PKI_log_debug("- Serial: %s", serial ? serial : "n/a");
-					PKI_log_debug("- Subject: %s", subject ? subject : "n/a");
-					PKI_log_debug("- Issuer: %s", issuer ? issuer : "n/a");
-
-					if (serial) PKI_Free(serial);
-					if (subject) PKI_Free(subject);
-					if (issuer) PKI_Free(issuer);
-				}
+					caCert = ca->ca_cert;
+				else
+					caCert = NULL;
 			}
+			else signCert = NULL;
 		}
 
-		/* This case returns the same response for any request in case the
-		 * CA was compromised - all certificates are to be considered now
-		 * not valid
-		 */
+		// Here we check for the case where the CRL status is not ok, so
+		// we ask the client to try later, hopefully when we have a valid
+		// CRL to provide the response with
+		if (ca->crl_status != CRL_OK)
+		{
+			// We set the status to unknown since we don't have a valid CRL
+			PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN,
+					NULL, NULL, nextupd, CRL_REASON_UNSPECIFIED, NULL);
+
+			continue;
+		}
+
+		// This case returns the same response for any request in case the
+		// CA was compromised - all certificates are to be considered now
+		// not valid
 		if (ca->compromised > 0)
 		{
 			PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
@@ -158,36 +336,14 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			continue;
 		}
 
-		/* Here we check for the case where the CRL status is not ok, so
-		 * we ask the client to try later, hopefully when we have a valid
-		 * CRL to provide the response with
-		 */
-		if (ca->crl_status != CRL_OK)
-		{
-			PKI_X509_OCSP_RESP_set_status(resp, PKI_X509_OCSP_RESP_STATUS_TRYLATER);
-
-			if (conf->debug || conf->verbose)
-			{
-				PKI_log_err ("SENT TRYLATER (%s)", get_crl_status_info (ca->crl_status));
-			}
-			goto end;
-		}
-
-		/* Get the entry from the CRL data, if NULL then the
-		   certificate is not revoked */
-		entry = OCSPD_REVOKED_find( ca, serial );
-
-		/* Sets thisUpdate field to the value of the loaded CRL */
-		// thisupd = M_ASN1_TIME_dup(ca->lastUpdate);
-		// thisupd = PKI_TIME_dup(ca->lastUpdate);
-		thisupd = PKI_TIME_new( 0 );
-
-		if (entry)
+		// Get the entry from the CRL data, if NULL then the
+		// certificate is not revoked
+		if ((entry = OCSPD_REVOKED_find( ca, serial )) != NULL)
 		{
 			long reason = -1;
 			void *ext = NULL;
 
-			/* If extensions are found, process them */
+			// If extensions are found, process them
 			if (entry->extensions)
 			{
 				ASN1_ENUMERATED *asn = NULL;
@@ -202,218 +358,86 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				ext = X509_REVOKED_get_ext_d2i( entry, NID_invalidity_date, NULL, NULL );
 			}
 
-			if((PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
-					entry->revocationDate, thisupd, nextupd, reason, ext )) == PKI_ERR )
+			if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
+					entry->revocationDate, thisupd, nextupd, reason, ext )) == PKI_ERR)
 			{
-				PKI_log_err ("Can not generate OCSP response");
+				PKI_log_err ("Can not add a simple resp into the OCSP response");
+
+				// Let's free the current response (since there is an internal error,
+				// we do not want to generate partially valid responses)
+				PKI_X509_OCSP_RESP_free(resp);
+
+				// Generates the error response
+				resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+
+				// Skip the processing and return this new response
+				goto end;
 			}
 
 			if( reason == CRL_REASON_CERTIFICATE_HOLD ) {
-				/* TODO: We might want to add the CrlID
- 				   extension to the response */
+				// TODO: We might want to add the CrlID extension to the response
 			}
 
 			if (conf->verbose)
-			{
-				char * s = PKI_INTEGER_get_parsed ( serial );
-
-				PKI_log(PKI_LOG_INFO, "Status for %s is REVOKED", s );
-				PKI_Free ( s );
-			}
+				PKI_log(PKI_LOG_INFO, "%s [serial %s]",
+					statusInfo[OCSPD_INFO_REVOKED], parsedSerial);
 		}
 		else if (ca == NULL )
 		{
 			if (conf->verbose)
-			{
-				char * s = PKI_INTEGER_get_parsed ( serial );
-				PKI_log( PKI_LOG_INFO, "status unknown for %ld (unknown CA)", s );
-				PKI_Free ( s );
-			}
+				PKI_log(PKI_LOG_INFO, "%s [serial %s]",
+						statusInfo[OCSPD_INFO_NON_RECOGNIZED_CA], parsedSerial);
 
 			PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN, 
-				NULL, thisupd, nextupd, 0, NULL );
+				NULL, thisupd, nextupd, CRL_REASON_UNSPECIFIED, NULL );
 		}
 		else
 		{
 			if (conf->verbose)
-			{
-				char *s = PKI_INTEGER_get_parsed ( serial );
-				PKI_log( PKI_LOG_INFO, "status VALID for %s",s);
-				PKI_Free ( s );
-			}
-			
+				PKI_log(PKI_LOG_INFO, "%s [serial %s]",
+					statusInfo[OCSPD_INFO_VALID_CERT], parsedSerial);
+
 			PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_GOOD,
 				NULL, thisupd, nextupd, 0, NULL );
 		}
 	}
 
+	if (parsedSerial) PKI_Free(parsedSerial);
+
 	// Let's copy the NONCE from the request
-	if(PKI_X509_OCSP_RESP_copy_nonce( resp, req ) == PKI_ERR ) {
-		PKI_log_err ("Can not copy NONCE from request to response");
-	}
-
-	// If no cert is provided but we have the token, let's get it from
-	// the token
-	if (!cert && tk) cert = PKI_TOKEN_get_cert ( tk );
-
-	if (tk == NULL)
+	if (PKI_X509_OCSP_REQ_has_nonce(req))
 	{
-		if (conf->debug) PKI_log_debug ( "CA Token is empty");
-		if (conf->token == NULL) PKI_log_debug ("Default Token is empty!");
-	}
-
-	/* It seems that this function is not thread safe!!! */
-	if (tk != NULL)
-	{
-		if (cert == NULL)
+		if (PKI_X509_OCSP_RESP_copy_nonce(resp, req) == PKI_ERR)
 		{
-			PKI_log_err ("OCSP certificate is empty!");
-			if (resp) PKI_X509_OCSP_RESP_free (resp);
-			resp = NULL;
+			PKI_log_err ("Can not copy NONCE from request to response");
 
-			goto end;
-		}
+			// Free the current response
+			PKI_X509_OCSP_RESP_free(resp);
 
-		/* It seems that CISCO devices require the SHA1 algorithm to be
- 		 * used. Make sure you use that in the configuration for the digest
- 		 */
-		PKI_DIGEST_ALG *sign_dgst = NULL;
-
-		if (conf->sigDigest) sign_dgst = conf->sigDigest;
-		else sign_dgst = PKI_ALGOR_get_digest(tk->algor);
-
-		if (conf->debug)
-		{
-			if (sign_dgst)
-				PKI_log_debug("Digest Algorithm For Signature: %s", PKI_DIGEST_ALG_get_parsed(sign_dgst));
-			else
-				PKI_log_err("Can not parse the Digest Algorithm for Signatures!");
-		}
-
-		/* Sign the response only if we have a valid pkey pointer! */
-		int sig_rv = PKI_OK;
-		if (use_server_cert)
-		{
-			if (use_server_cacert)
-			{
-				sig_rv = PKI_X509_OCSP_RESP_sign(resp, tk->keypair, cert, cacert,
-					tk->otherCerts, sign_dgst);
-			}
-			else
-			{
-				sig_rv = PKI_X509_OCSP_RESP_sign(resp, tk->keypair, cert, tk->cacert,
-					tk->otherCerts, sign_dgst);
-			}
-		}
-		else 
-		{
-			sig_rv = PKI_X509_OCSP_RESP_sign_tk(resp, tk, sign_dgst);
-		}
-
-		if (sig_rv != PKI_OK)
-		{
-			PKI_log_err("Failed while signing [%s]", PKI_ERROR_crypto_get_errdesc());
-			if (resp) PKI_X509_OCSP_RESP_free(resp);
-			resp = NULL;
-
-			goto end;
-		}
-
-		/* Test Mode: Issues WRONG signatures by flipping the first
- 		 * bit in the signature. Use it ONLY for testing OCSP clients
- 		 * verify capabilities! */
-
-		if (conf->testmode)
-		{
-			PKI_STRING *signature = NULL;
-
-			PKI_log(PKI_LOG_ALWAYS, 
-				"WARNING: TestMode (Wrong Signatures): Fipping first bit in Signature");
-
-			// Get The Signature
-			signature = PKI_X509_OCSP_RESP_get_data(resp, PKI_X509_DATA_SIGNATURE);
-			if(signature)
-			{	
-				PKI_X509_OCSP_RESP_VALUE *resp_val = NULL;
-  			PKI_OCSP_RESP *r = NULL;
-				OCSP_BASICRESP *bsrp = NULL;
-				
-				int i = 0;
-
-				PKI_log_debug("Test Mode: Signature Found!");
-
-				// Flip The First n-Bit of the Signature (n=1)
-				for (i=0; i < 1; i++ )
-				{
-					if(ASN1_BIT_STRING_get_bit(signature, i))
-    			{
-    				ASN1_BIT_STRING_set_bit(signature, i, 0);
-    			}
-    			else
-    			{
-        		ASN1_BIT_STRING_set_bit(signature, i, 1);
-    			}
-				}
-
-				r = resp->value;
-
-				// Now we need to re-encode the basicresp
-		  	resp_val = r->resp;
-				bsrp = r->bs;
-
-				if (resp_val->responseBytes)
-					OCSP_RESPBYTES_free(resp_val->responseBytes);
-
-				if (!(resp_val->responseBytes = OCSP_RESPBYTES_new()))
-				{
-					PKI_log_err("Memory Error, aborting signature!");
- 					return PKI_ERR;
-				}
-
-				resp_val->responseBytes->responseType = OBJ_nid2obj(NID_id_pkix_OCSP_basic);
-
-				if (bsrp)
-				{
-					/* Now add the encoded data to the request bytes */
-					if (!ASN1_item_pack(bsrp, ASN1_ITEM_rptr(OCSP_BASICRESP),
-													&resp_val->responseBytes->response))
-					{
-						PKI_log_err("ERROR while encoding OCSP RESP");
-						return ( PKI_ERR );
-					}
-				}
-			}
-			else
-			{
-				if (conf->debug) PKI_log_debug("Test Mode: Signature Not Found!");
-			}
+			// Generates the error response
+			resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
 		}
 	}
-
-	if( conf->debug ) PKI_log_debug ("Response signed ok!");
-
-	/*
-	if ( conf->debug ) {
-		PKI_MEM *mem = NULL;
-		mem = PKI_X509_OCSP_RESP_put_mem ( resp, PKI_DATA_FORMAT_ASN1,
-				NULL, NULL, NULL );
-
-		PKI_log_debug("RESP converted -> %d", mem->size );
-
-		URL_put_data ( "/tmp/ocsp-req-2.der", mem, NULL,
-			NULL, 0, 0, NULL );
-
-		PKI_X509_OCSP_REQ_put(req, PKI_DATA_FORMAT_ASN1,
-				"/tmp/ocsp-req.der", NULL, NULL, NULL );
-		PKI_X509_OCSP_RESP_put(resp, PKI_DATA_FORMAT_ASN1,
-				"/tmp/ocsp-resp.der", NULL, NULL, NULL );
-	}
-	*/
 
 end:
 
-	if(thisupd) PKI_TIME_free ( thisupd );
-	if(nextupd) PKI_TIME_free ( nextupd );
+	// Now we need to sign the response
+	if (resp != NULL)
+	{
+		if (sign_ocsp_response(resp, conf, signCert, caCert) != PKI_OK)
+		{
+			// Free the current response, and generate the appropriate error
+			PKI_X509_OCSP_RESP_free(resp);
+			resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+		}
+	}
+
+	// Free the memory for the parsed serial (debug or verbose modes only)
+	if (parsedSerial) PKI_Free(parsedSerial);
+
+	// Free the time information
+	if (thisupd) PKI_TIME_free(thisupd);
+	if (nextupd) PKI_TIME_free(nextupd);
 
 	return resp;
 }
@@ -440,7 +464,7 @@ int ocspd_resp_send_socket(int connfd, PKI_X509_OCSP_RESP *r,
 		return 0;
 	}
 
-	if ((mem = PKI_X509_OCSP_REQ_put_mem(r, PKI_DATA_FORMAT_ASN1, 
+	if ((mem = PKI_X509_OCSP_RESP_put_mem(r, PKI_DATA_FORMAT_ASN1,
 					NULL, NULL, NULL )) == NULL)
 	{
 		PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
@@ -448,8 +472,11 @@ int ocspd_resp_send_socket(int connfd, PKI_X509_OCSP_RESP *r,
 	}
 
 	// Gets the time for the expire
-	if (conf->set_nextUpdate) expire = PKI_TIME_new ((conf->nmin*60) + (conf->ndays * 86400));
-	else expire = PKI_TIME_new( 0 );
+	if (conf->set_nextUpdate)
+		expire = PKI_TIME_new ((conf->nmin*60) + (conf->ndays * 86400));
+	else
+		expire = PKI_TIME_new( 0 );
+
 	if (expire)
 	{
 		tmp_parsed_expire = PKI_TIME_get_parsed(expire);

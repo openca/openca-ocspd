@@ -19,7 +19,8 @@
 extern OCSPD_CONFIG * ocspd_conf;
 
 /* Functions */
-OCSPD_CONFIG * OCSPD_load_config( char *configfile ) {
+OCSPD_CONFIG * OCSPD_load_config(char *configfile)
+{
 	OCSPD_CONFIG *h = NULL;
 	PKI_CONFIG *cnf = NULL;
 	PKI_CONFIG_STACK *ca_config_stack = NULL;
@@ -353,6 +354,7 @@ OCSPD_CONFIG * OCSPD_load_config( char *configfile ) {
 	   CERT_ID for the different CAs */
 	if ((OCSPD_build_ca_list( h, ca_config_stack )) == PKI_ERR )
 	{
+
 		PKI_log(PKI_LOG_ERR, "Can not build CA list!");
 		if (ca_config_stack) PKI_STACK_CONFIG_free ( ca_config_stack );
 		goto err;
@@ -831,8 +833,6 @@ CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *cert,
 
 	PKI_X509_NAME *iName = NULL;
 	PKI_DIGEST *nameDigest = NULL;
-
-	PKI_log_debug("Building CA_ENTRY_CERTID");
 
 	/* Check for needed info */
 	if ( !cert || !cert->value ) return NULL;

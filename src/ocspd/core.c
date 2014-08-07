@@ -1,18 +1,11 @@
 /* ===========================================================
  * OpenCA OCSPD Server - src/core.c
- * (c) 2001-2008 by Massimiliano Pala and OpenCA Labs
+ * (c) 2001-2014 by Massimiliano Pala and OpenCA Labs
  * All Rights Reserved
  * ===========================================================
  * OpenCA Licensed Software
  * ===========================================================
  */
-
-/*
-#include <strings.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-*/
 
 #include "general.h"
 #include "threads.h"
@@ -36,14 +29,15 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 
 	struct sigaction sa;
 
-	/* Just print a nice log message when exits */
+	// Just print a nice log message when exits
 	atexit(close_server);
 
 	if( ocspd_conf->token ) {
 
-		if( PKI_TOKEN_init ( ocspd_conf->token, 
+		if( PKI_TOKEN_init(ocspd_conf->token, 
 				ocspd_conf->token_config_dir, ocspd_conf->token_name)
-								== PKI_ERR ) {
+								== PKI_ERR)
+		{
 			PKI_log_err( "Can not load default token (%s/%s)",
 				ocspd_conf->cnf_filename, ocspd_conf->token_name );
 			exit(1);
@@ -51,7 +45,8 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 
 		PKI_TOKEN_cred_set_cb ( ocspd_conf->token, NULL, NULL);
 
-		if ( PKI_TOKEN_login ( ocspd_conf->token ) != PKI_OK ) {
+		if (PKI_TOKEN_login ( ocspd_conf->token ) != PKI_OK)
+		{
 			PKI_log_debug("Can not login into token!");
 			exit(1);
 		}
@@ -70,19 +65,19 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 		}
 	}
 
-	/* Init all the tokens configured for the single CA entries */
-	for( i=0; i < PKI_STACK_elements(ocspd_conf->ca_list);i++){
+	/* Initialize all the tokens configured for the single CA entries */
+	for (i = 0; i < PKI_STACK_elements(ocspd_conf->ca_list); i++)
+	{
 		CA_LIST_ENTRY *ca = NULL;
 
-		if((ca = PKI_STACK_get_num( ocspd_conf->ca_list, i )) == NULL){
+		if ((ca = PKI_STACK_get_num( ocspd_conf->ca_list, i )) == NULL)
 			continue;
-		}
 
-		if ( ca->token_name == NULL ) {
+		if (ca->token_name == NULL)
 			continue;
-		}
 
-		if((ca->token = PKI_TOKEN_new_null()) == NULL ) {
+		if ((ca->token = PKI_TOKEN_new_null()) == NULL)
+		{
 			PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
 			exit (1);
 		}
@@ -126,50 +121,61 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 		exit(101);
 	}
 
-	/* Now Chroot the application */
-	if( (ocspd_conf->chroot_dir ) && (set_chroot( ocspd_conf ) < 1) ) {
+	// Now Chroot the application
+	if ((ocspd_conf->chroot_dir) && (set_chroot( ocspd_conf ) < 1))
+	{
 		PKI_log_err ("Can not chroot, exiting!");
 		exit(204);
 	}
 
-	/* Set privileges */
-	if( set_privileges( ocspd_conf ) < 1 ) {
-		if( ocspd_conf->chroot_dir != NULL ) {
+	// Set privileges
+	if (set_privileges(ocspd_conf) < 1)
+	{
+		if (ocspd_conf->chroot_dir != NULL)
+		{
 			PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Can not drop privileges! [203]");
 			PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Continuing because chrooted");
-		} else {
-			PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Can not drop privileges! [203]");
+		}
+		else
+		{
+			PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Can not drop privileges! [204]");
 			PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Check User/Group in config file!");
-			exit(203);
+			exit(204);
 		}
 	}
 
 	if((ocspd_conf->threads_list = calloc ( (size_t) ocspd_conf->nthreads, 
-					sizeof(Thread))) == NULL ) {
+					sizeof(Thread))) == NULL )
+	{
 		PKI_log_err ("Memory allocation failed");
-	};
+		exit(79);
+	}
 
-	for( i = 0; i < ocspd_conf->nthreads; i++ ) {
-		if(thread_make(i) != 0 ) {
+	// Creates the Threads
+	for (i = 0; i < ocspd_conf->nthreads; i++)
+	{
+		if (thread_make(i) != 0)
+		{
 			PKI_log_err ("Can not create thread (%d)\n", i );
 			exit(80);
 		}
 	}
 
-	/* Register the alarm handler */
+	// Register the alarm handler
 	set_alrm_handler();
 
-	/* Just print a nice log message when killed */
+	// Just print a nice log message when killed
 	signal(SIGTERM, handle_sigterm );
 	signal(SIGABRT, handle_sigabrt );
 
-	/* Setting the SIGHUP in order to reload the CRLs */
+	// Setting the SIGHUP in order to reload the CRLs
 	// sa.sa_handler = auto_crl_check;
 	sa.sa_handler = force_crl_reload;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 
-	if (sigaction(SIGHUP, &sa, NULL) == -1) {
+	if (sigaction(SIGHUP, &sa, NULL) == -1)
+	{
 		PKI_log_err("Error during setting sig_handler");
 		exit(1);
 	}
@@ -177,20 +183,25 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 	cliaddrlen = sizeof( cliaddr );
 	for ( ; ; ) 
 	{
-		PKI_log_debug( "CORE::Waiting on connect" );
-
+		// Acquires the Mutex for handling the ocspd_conf->connfd
 		PKI_MUTEX_acquire ( &ocspd_conf->mutexes[CLIFD_MUTEX] );
-
 		if ((ocspd_conf->connfd = PKI_NET_accept(ocspd_conf->listenfd, 0)) == -1)
 		{
-			char err_str[512];
-			PKI_log_err("Network Error [%d::%s]", errno,
-				strerror_r(errno, err_str, sizeof(err_str)));
-			PKI_MUTEX_release ( &ocspd_conf->mutexes[CLIFD_MUTEX] );
+			// Provides some information about the error
+			if (ocspd_conf->verbose || ocspd_conf->debug)
+			{
+				char err_str[512];
+				PKI_log_err("Network Error [%d::%s]", errno,
+						strerror_r(errno, err_str, sizeof(err_str)));
+			}
+
+			// Returns the connfd MUTEX and restart from the top of the cycle
+			PKI_MUTEX_release(&ocspd_conf->mutexes[CLIFD_MUTEX]);
 			continue;
 		}
 
-		if (ocspd_conf->verbose)
+		// Some debugging information
+		if (ocspd_conf->verbose || ocspd_conf->debug)
 		{
 			if (getpeername(ocspd_conf->connfd, (struct sockaddr*)&cliaddr, &cliaddrlen) == -1)
 			{
@@ -199,20 +210,24 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 					strerror_r(errno, err_str, sizeof(err_str)));
 			}
 
-			PKI_log(PKI_LOG_INFO, "CORE::Connection from [%s]\n", 
+			PKI_log(PKI_LOG_INFO, "Connection from [%s]\n",
 	 			inet_ntoa(cliaddr.sin_addr) );
 		}
 
+		// Communicate that there is a good socket waiting for a thread to pickup
 		PKI_COND_broadcast ( &ocspd_conf->condVars[CLIFD_COND] );
 		PKI_MUTEX_release ( &ocspd_conf->mutexes[CLIFD_MUTEX] );
-		PKI_MUTEX_acquire ( &ocspd_conf->mutexes[SRVFD_MUTEX] );
 
-		while( ocspd_conf->connfd > 2 ) {
+		// Waits for a thread to successfully pickup the socket
+		PKI_MUTEX_acquire ( &ocspd_conf->mutexes[SRVFD_MUTEX] );
+		while (ocspd_conf->connfd > 2)
+		{
 			PKI_COND_wait ( &ocspd_conf->condVars[SRVFD_COND],
 				&ocspd_conf->mutexes[SRVFD_MUTEX] );
 		}
 		PKI_MUTEX_release ( &ocspd_conf->mutexes[SRVFD_MUTEX] );
 	}
+
 	return(0);
 }
 
