@@ -201,7 +201,7 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 		}
 
 		// Some debugging information
-		if (ocspd_conf->verbose || ocspd_conf->debug)
+		if (ocspd_conf->debug)
 		{
 			if (getpeername(ocspd_conf->connfd, (struct sockaddr*)&cliaddr, &cliaddrlen) == -1)
 			{
@@ -210,8 +210,8 @@ int start_threaded_server ( OCSPD_CONFIG * ocspd_conf )
 					strerror_r(errno, err_str, sizeof(err_str)));
 			}
 
-			PKI_log(PKI_LOG_INFO, "Connection from [%s]\n",
-	 			inet_ntoa(cliaddr.sin_addr) );
+			PKI_log(PKI_LOG_INFO, "Connection from [%s]",
+	 			inet_ntoa(cliaddr.sin_addr));
 		}
 
 		// Communicate that there is a good socket waiting for a thread to pickup
