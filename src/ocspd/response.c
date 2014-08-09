@@ -84,6 +84,9 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 		else
 			PKI_log_err("Can not parse the Digest Algorithm for Signatures!");
 
+		if (PKI_X509_CERT_check_pubkey(signCert, tk->keypair))
+			PKI_log_err("The PublicKey in the certificate and the private keypair do not match!");
+
 		if (signCert)
 		{
 			char *subject = PKI_X509_CERT_get_parsed(signCert, PKI_X509_DATA_SUBJECT);
@@ -94,9 +97,6 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 			PKI_log_debug("- Serial .....: %s", serial  ? serial  : "n/a");
 			PKI_log_debug("- Subject ....: %s", subject ? subject : "n/a");
 			PKI_log_debug("- Issuer .....: %s", issuer  ? issuer  : "n/a");
-
-			PKI_log_debug("Signing Algorithm:");
-			PKI_log_debug("- Digest .....: %s", PKI_DIGEST_ALG_get_parsed(sign_dgst));
 
 			if (subject) PKI_Free(subject);
 			if (serial ) PKI_Free(serial );
