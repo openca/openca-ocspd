@@ -31,12 +31,21 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 {
 	PKI_TOKEN *tk = NULL;
 
-	PKI_DIGEST_ALG *sign_dgst = NULL;
+	PKI_DIGEST_ALG * sign_dgst = NULL;
+	PKI_OCSP_RESP  * r = NULL;
 
 	int sig_rv = PKI_OK;
 
 	// Input Checks
 	if (!resp || !conf) return PKI_ERR;
+	
+	// Checks the internal value
+	r = PKI_X509_get_value(resp);
+	if (!r || !r->resp) return PKI_ERR;
+
+	// Checks if the response can be signed, if not, let's return
+	// OK since there is no actions to be addressed
+	if (!r->bs) return PKI_OK;
 
 	// Let's get the default token for signing
 	if ((tk = conf->token) == NULL)
@@ -81,14 +90,17 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 			char *issuer = PKI_X509_CERT_get_parsed(signCert, PKI_X509_DATA_ISSUER);
 			char *serial = PKI_X509_CERT_get_parsed(signCert, PKI_X509_DATA_SERIAL);
 
-			PKI_log_debug("Using CA-Specific Configured Certificate:");
-			PKI_log_debug("- Serial: %s", serial ? serial : "n/a");
-			PKI_log_debug("- Subject: %s", subject ? subject : "n/a");
-			PKI_log_debug("- Issuer: %s", issuer ? issuer : "n/a");
+			PKI_log_debug("Signing Certificate:");
+			PKI_log_debug("- Serial .....: %s", serial  ? serial  : "n/a");
+			PKI_log_debug("- Subject ....: %s", subject ? subject : "n/a");
+			PKI_log_debug("- Issuer .....: %s", issuer  ? issuer  : "n/a");
 
-			if (serial) PKI_Free(serial);
+			PKI_log_debug("Signing Algorithm:");
+			PKI_log_debug("- Digest .....: %s", PKI_DIGEST_ALG_get_parsed(sign_dgst));
+
 			if (subject) PKI_Free(subject);
-			if (issuer) PKI_Free(issuer);
+			if (serial ) PKI_Free(serial );
+			if (issuer ) PKI_Free(issuer );
 		}
 	}
 
@@ -102,7 +114,8 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 		return PKI_ERR;
 	}
 
-	if (conf->debug) PKI_log_debug ("Response signed successfully");
+	if (conf->debug)
+		PKI_log_debug ("Response signed successfully");
 
 	// Test Mode: Issues WRONG signatures by flipping the first
  	// bit in the signature. Use it ONLY for testing OCSP clients
@@ -198,6 +211,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	PKI_X509_CERT *caCert = NULL;
 
 	int i, id_count;
+	int signResponse;
 
 	int use_server_cert = 0;
 	int use_server_cacert = 0;
@@ -206,6 +220,9 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	PKI_TIME *nextupd = NULL;
 
 	char *parsedSerial = NULL;
+
+	// Set the signature bit to 0 (enable only for non-error responses)
+	signResponse = 0;
 
 	// Checks if we have a valid request, if not, we just send back
 	// a response for a malformed request
@@ -235,7 +252,10 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	if((resp = PKI_X509_OCSP_RESP_new()) == NULL )
 	{
 		PKI_log_err("Memory Error: can not allocate a new OCSP response");
-		return NULL;
+
+		// Let's generate the appropriate error response
+		resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+		goto end;
 	}
 
 	/* Let's set the default token for signing */
@@ -251,36 +271,41 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	/* Examine each certificate id in the request */
 	for (i = 0; i < id_count; i++)
 	{
-		OCSP_ONEREQ *one = NULL;
-		ASN1_INTEGER *serial = NULL;
-		CA_LIST_ENTRY *ca = NULL;
-		X509_REVOKED *entry = NULL;
+		PKI_INTEGER   *serial = NULL;
+		CA_LIST_ENTRY *ca     = NULL;
+		X509_REVOKED  *entry  = NULL;
 
-		one = OCSP_request_onereq_get0(req_val, i);
-		cid = OCSP_onereq_get0_id(one);
+		/* Get basic request info */
+		if (((cid = PKI_X509_OCSP_REQ_get_cid(req, i)) == NULL) ||
+				((serial = PKI_X509_OCSP_REQ_get_serial(req, i)) == NULL))
+		{
+			// NO cid found, let's generate a response for a malformed request
+			if (resp) PKI_X509_OCSP_RESP_free(resp);
+			resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_MALFORMEDREQUEST);
 
+			goto end;
+		}
+
+		// Some debugging information
 		if (conf->verbose || conf->debug)
 		{
 			if (parsedSerial) PKI_Free(parsedSerial);
 			parsedSerial = PKI_INTEGER_get_parsed(serial);
+
+			if (conf->debug)
+				PKI_log( PKI_LOG_INFO, "Request for certificate serial %s", parsedSerial);
 		}
 
-		/* Get basic request info */
-		OCSP_id_get0_info(NULL, NULL, NULL, &serial, cid);
-
-		if (conf->debug)
-			PKI_log( PKI_LOG_INFO, "request for certificate serial %s", parsedSerial);
-
 		/* Is this request about our CA? */
-		if ((ca = OCSPD_CA_ENTRY_find( conf, cid )) == NULL)
+		if ((ca = OCSPD_CA_ENTRY_find(conf, cid)) == NULL)
 		{
 			if (conf->verbose)
 				PKI_log(PKI_LOG_INFO, "%s [serial %s]",
 					statusInfo[OCSPD_INFO_NON_RECOGNIZED_CA], parsedSerial);
 
 			// Adds the single response to the response container
-			PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN,
-					NULL, NULL, nextupd, 0, NULL );
+			PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN,
+					NULL, NULL, nextupd, 0, NULL);
 
 			// TODO: Maybe we could add the serviceLocator extension
  			//       we can use the PRQP to find out the server address
@@ -299,8 +324,8 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		}
 		else
 		{
-			/* If no specific token but a different server_cert
- 			 * is to be used, let's report it in debug mode */
+			// If no specific token but a different server_cert
+ 			// is to be used, let's report it in debug mode
 			if (ca->server_cert)
 			{
 				signCert = ca->server_cert;
@@ -402,8 +427,6 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		}
 	}
 
-	if (parsedSerial) PKI_Free(parsedSerial);
-
 	// Let's copy the NONCE from the request
 	if (PKI_X509_OCSP_REQ_has_nonce(req))
 	{
@@ -416,13 +439,19 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 
 			// Generates the error response
 			resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+
+			goto end;
 		}
 	}
+
+	// Now, if we reach here, no error responses were generated, so we can
+	// safely set the signature bit to true (sign the response)
+	signResponse = 1;
 
 end:
 
 	// Now we need to sign the response
-	if (resp != NULL)
+	if (resp != NULL && signResponse == 1)
 	{
 		if (sign_ocsp_response(resp, conf, signCert, caCert) != PKI_OK)
 		{
@@ -453,6 +482,8 @@ int ocspd_resp_send_socket(int connfd, PKI_X509_OCSP_RESP *r,
 	char *tmp_parsed_date = NULL;
 	char *tmp_parsed_expire = NULL;
 
+	int buf_size = 0;
+
 	char http_resp[] =
 		"HTTP/1.0 200 OK\r\n"
 		"Content-Type: application/ocsp-response\r\n"
@@ -461,14 +492,14 @@ int ocspd_resp_send_socket(int connfd, PKI_X509_OCSP_RESP *r,
 	if ( connfd <= 0 )
 	{
 		PKI_log_err("Socket fd is 0!");
-		return 0;
+		return PKI_ERR;
 	}
 
 	if ((mem = PKI_X509_OCSP_RESP_put_mem(r, PKI_DATA_FORMAT_ASN1,
 					NULL, NULL, NULL )) == NULL)
 	{
 		PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
-		return ( 0 );
+		return PKI_ERR;
 	}
 
 	// Gets the time for the expire
@@ -496,39 +527,39 @@ int ocspd_resp_send_socket(int connfd, PKI_X509_OCSP_RESP *r,
 	if (tmp_parsed_date && tmp_parsed_expire)
 	{
 #if ( LIBPKI_OS_BITS == LIBPKI_OS32)
-		snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\nDate: %s\r\nExpires: %s\r\n\r\n",
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\nDate: %s\r\nExpires: %s\r\n\r\n",
 			http_resp, mem->size, tmp_parsed_date, tmp_parsed_expire);
 #else
-		snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\nDate: %s\r\nExpires: %s\r\n\r\n",
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\nDate: %s\r\nExpires: %s\r\n\r\n",
 			http_resp, mem->size, tmp_parsed_date, tmp_parsed_expire);
 #endif
 	}
 	else if (tmp_parsed_date)
 	{
 #if ( LIBPKI_OS_BITS == LIBPKI_OS32)
-		snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\nDate: %s\r\n\r\n",
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\nDate: %s\r\n\r\n",
 			http_resp, mem->size, tmp_parsed_date);
 #else
-		snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\nDate: %s\r\n\r\n",
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\nDate: %s\r\n\r\n",
 			http_resp, mem->size, tmp_parsed_date);
 #endif
 	}
 	else if (tmp_parsed_expire)
 	{
 #if ( LIBPKI_OS_BITS == LIBPKI_OS32)
-		snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\nExpires: %s\r\n\r\n",
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\nExpires: %s\r\n\r\n",
 			http_resp, mem->size, tmp_parsed_expire);
 #else
-		snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\nExpires: %s\r\n\r\n",
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\nExpires: %s\r\n\r\n",
 			http_resp, mem->size, tmp_parsed_expire);
 #endif
 	}
 	else
 	{
 #if ( LIBPKI_OS_BITS == LIBPKI_OS32 )
-		snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\n\r\n", http_resp, mem->size);
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %d\r\n\r\n", http_resp, mem->size);
 #else
-		snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\n\r\n", http_resp, mem->size);
+		buf_size = snprintf(buf, sizeof(buf), "%sContent-Length: %ld\r\n\r\n", http_resp, mem->size);
 #endif
 	}
 
@@ -543,19 +574,19 @@ int ocspd_resp_send_socket(int connfd, PKI_X509_OCSP_RESP *r,
 
 	if (conf->debug) 
 	{
-		PKI_log_debug("OCSP Response Bytes = %d, HTTP Header Bytes = %d", mem->size, strlen(buf));
+		PKI_log_debug("OCSP Response Bytes = %d, HTTP Header Bytes = %d", mem->size, buf_size);
 
 		// Enable this section if you need to debug responses deeper
 		/*
-		URL_put_data ("file:///var/tmp/ocsp-resp.der", mem, NULL, NULL, 0, 0, NULL);
-		PKI_log_debug("OCSP Response Written to /var/tmp/ocsp-resp.der (%d)", mem->size);
+		URL_put_data ("file:///ocsp-resp.der", mem, NULL, NULL, 0, 0, NULL);
+		PKI_log_debug("OCSP Response Written to ocsp-resp.der (%d)", mem->size);
 
-		PKI_MEM *t = PKI_MEM_new_data(strlen(buf), buf);
+		PKI_MEM *t = PKI_MEM_new_data(strlen(buf), (unsigned char *)buf);
 		if (t)
 		{
-			PKI_MEM_add(t, mem->data, mem->size);
-			URL_put_data ("file:///var/tmp/http-ocsp-resp.txt", t, NULL, NULL, 0, 0, NULL);
-			PKI_log_debug("HTTP Response Written to /var/tmp/http-ocsp-resp.txt (%d)", t->size);
+			PKI_MEM_add(t, (char *) mem->data, mem->size);
+			URL_put_data ("file:///http-ocsp-resp.txt", t, NULL, NULL, 0, 0, NULL);
+			PKI_log_debug("HTTP Response Written to http-ocsp-resp.txt (%d)", t->size);
 		}
 		*/
 	}

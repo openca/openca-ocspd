@@ -10,18 +10,25 @@ void * thread_main ( void *arg );
 int thread_make ( int i )
 {
 	PKI_THREAD *th_id = NULL;
-	int id;
+	int * id = NULL;
 
 	// Basic Memory Check
 	if (!ocspd_conf || !ocspd_conf->threads_list) return -1;
 
 	// Gets the right pointer where to store the new thread identifier
 	th_id = &ocspd_conf->threads_list[i].thread_tid;
-	id = i;
+	if ((id = (int *) PKI_Malloc(sizeof(int))) == NULL)
+	{
+		PKI_log_err("Memory allocation error!");
+		return -1;
+	}
+
+	// Assign the thread id
+	*id = i;
 
 	// Let's generate the new thread
 	// if ((ret = PKI_THREAD_create(th_id, NULL, thread_main, (void *) &i)) != PKI_OK)
-	if ((th_id = PKI_THREAD_new(thread_main, (void *) &id)) == NULL)
+	if ((th_id = PKI_THREAD_new(thread_main, (void *) id)) == NULL)
 	{
 		PKI_log_err("ERROR::OPENCA_SRV_ERR_THREAD_CREATE");
 		return(-1);
@@ -48,8 +55,17 @@ void * thread_main ( void *arg )
 	PKI_X509_OCSP_REQ  *req = NULL;
 	PKI_X509_OCSP_RESP *resp = NULL;
 
-	arg_int = (int *) arg;
-	thread_nr = *arg_int;
+	if (arg)
+	{
+		arg_int = (int *) arg;
+		thread_nr = *arg_int;
+
+		PKI_Free(arg);
+	}
+	else
+	{
+		thread_nr = -1;
+	}
 
 	if ( ocspd_conf->verbose )
 		PKI_log(PKI_LOG_INFO, "New Thread Started [%d]", thread_nr);
@@ -127,6 +143,9 @@ end:
 		// the associated memory
 		if (resp != NULL)
 		{
+			// Enable this line for debugging purposes
+			// PKI_X509_put(resp, PKI_DATA_FORMAT_ASN1, "/var/tmp/ocspd-resp.der", NULL, NULL, NULL );
+
 			// Send the response over the wire
 			ocspd_resp_send_socket( connfd, resp, ocspd_conf );
 

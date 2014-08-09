@@ -1,3 +1,6 @@
+* Aug 08 2014 Massimiliano Pala <madwolf@openca.org>
+- Cleaned up main thread handling code
+
 * Aug 04 2014 Massimiliano Pala <madwolf@openca.org>
 - Updated to LibPKI 0.8.7 interface
 - Fixed a double-free issue with HTTP GET requests

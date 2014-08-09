@@ -27,6 +27,7 @@ static char *ocspd_usage[] = {
 " -k pwd          - Password protecting the private key (if any)\n",
 " -debug          - Debug mode (exit after the first request)\n",
 " -testmode       - Use test mode (wrong signatures w/ 1st bit flipped\n",
+" -stdout         - Route all logging messages to stdout\n",
 " -v              - Talk alot while doing things\n",
 NULL
 };
@@ -46,6 +47,8 @@ void mask_signals();
 int main ( int argc, char *argv[] ) {
 
 	int log_level = PKI_LOG_NOTICE;
+	int log_type  = PKI_LOG_TYPE_SYSLOG;
+
 	int verbose   = 0;
 	int debug     = 0;
 	int testmode  = 0;
@@ -82,6 +85,8 @@ int main ( int argc, char *argv[] ) {
 			testmode=1;
 		} else if (strcmp(*argv,"-d") == 0) {
 			daemon=1;
+		} else if (strcmp(*argv,"-stdout") == 0) {
+			log_type=PKI_LOG_TYPE_STDOUT;
 		} else {
 			badops = 1;
 		};
@@ -104,7 +109,7 @@ bad:
 		fprintf(stderr, ocspd_warning, VERSION);
 	}
 
-	if(( PKI_log_init (PKI_LOG_TYPE_SYSLOG, log_level, NULL,
+	if(( PKI_log_init (log_type, log_level, NULL,
 			debug, NULL )) == PKI_ERR ) {
 		fprintf(stderr, "OCSPD, can not initiating logs! Aborting!\n\n");
 		exit(1);
