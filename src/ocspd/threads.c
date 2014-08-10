@@ -143,9 +143,6 @@ end:
 		// the associated memory
 		if (resp != NULL)
 		{
-			// Enable this line for debugging purposes
-			// PKI_X509_put(resp, PKI_DATA_FORMAT_ASN1, "/var/tmp/ocspd-resp.der", NULL, NULL, NULL );
-
 			// Send the response over the wire
 			ocspd_resp_send_socket( connfd, resp, ocspd_conf );
 

@@ -1,5 +1,6 @@
 * Aut 09 2014 Massimiliano Pala <madwolf@openca.org>
 - Added check for the same pubkey in cert and keypair (debug mode)
+- Added better support for CRL status checking when building responses
 
 * Aug 08 2014 Massimiliano Pala <madwolf@openca.org>
 - Cleaned up main thread handling code

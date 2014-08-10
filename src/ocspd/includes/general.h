@@ -89,10 +89,15 @@ typedef struct ca_entry_certid
 		   exact length of the passed hash (it is the upper
 		   limit for the memcmp() */
 
+		// The Hash Algorithm that was used
 		X509_ALGOR *hashAlgorithm;
 
+		// Identifier for the CA
 		ASN1_OCTET_STRING *keyHash;
 		ASN1_OCTET_STRING *nameHash;
+
+		// Holds the indication for the current status of the CRL
+		int crl_status;
 
 	} CA_ENTRY_CERTID;
 

@@ -136,7 +136,6 @@ int check_crl ( PKI_X509_CRL *x_crl, PKI_X509_CERT *x_cacert,
 	if (!conf) return (-1);
 
 	PKI_RWLOCK_read_lock ( &conf->crl_lock );
-	// pthread_rwlock_rdlock( &crl_lock );
 	if( !x_crl || !x_crl->value || !x_cacert || !x_cacert->value ) {
 		if( conf->verbose ) {
 			if(!x_crl || !x_crl->value) 
@@ -145,33 +144,14 @@ int check_crl ( PKI_X509_CRL *x_crl, PKI_X509_CERT *x_cacert,
 					PKI_log_err("CA cert missing");
 		}
 		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		// pthread_rwlock_unlock( &crl_lock );
 		return(-1);
 	}
 
-	// if( sk_X509_num(cacert) < 1 ) {
-	// 	if(ocspd_conf->verbose) 
-	// 		PKI_log_err("No CA cert loaded (%d)", 
-	// 			sk_X509_num(cacert));
-	// 	pthread_rwlock_unlock( &crl_lock );
-	// 	return(-2);
-	// }
-
-	//final = -99;
-	// for( i = 0; i < sk_X509_num(cacert); i++ ) {
-
-	// x = PKI_X509_get_value( x_cacert );
-
-		// if( (x = sk_X509_value(cacert,i)) == NULL ) {
-		// 	continue;
-		// }
-		
 	/* Gets the Public Key of the CA Certificate */
 	if((pkey = PKI_X509_CERT_get_data( x_cacert, 
 				PKI_X509_DATA_PUBKEY )) == NULL ) { 
 		PKI_log_err( "Can not parse PubKey from CA Cert");
 		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		// pthread_rwlock_unlock( &crl_lock );
 		return(-3);
 	}
 
@@ -179,7 +159,6 @@ int check_crl ( PKI_X509_CRL *x_crl, PKI_X509_CERT *x_cacert,
 							== NULL ) {
 		PKI_log_err ("Memory Error!");
 		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		// pthread_rwlock_unlock( &crl_lock );
 		return(-3);
 	}
 	
@@ -193,26 +172,7 @@ int check_crl ( PKI_X509_CRL *x_crl, PKI_X509_CERT *x_cacert,
 	k->value = NULL;
 	PKI_X509_KEYPAIR_free ( k );
 
-	/*
-	if((c = PKI_X509_get_value( x_crl )) == NULL ) {
-		PKI_log_err ("Can not retireve CRL Value!");
-		return (-4);
-	};
-
-	ret = X509_CRL_verify(c, pkey);
-	*/
-
-	/* Free allocked memory */
-	// if( pkey ) EVP_PKEY_free (pkey);
-
-	// if( ret > final ) final = ret;
-
-	PKI_log_debug("CRL and CA cert [%d] check ok", ret );
-	// }
-
-	// }
 	PKI_RWLOCK_release_read ( &conf->crl_lock );
-	// pthread_rwlock_unlock( &crl_lock );
 
 	if ( ret > 0 ) {
 		PKI_log(PKI_LOG_INFO, "CRL matching CA cert ok [ %d ]",
@@ -242,11 +202,13 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 			ca->ca_id, CRL_ERROR_LAST_UPDATE );
 
 		PKI_RWLOCK_release_read ( &conf->crl_lock );
+		ca->crl_status = CRL_ERROR_LAST_UPDATE;
 		// pthread_rwlock_unlock( &crl_lock );
 		return(CRL_ERROR_LAST_UPDATE);
 	} else if (i > 0) {
 		PKI_log_err("WARING::CRL [%s] NOT YET valid (code %d)", 
 				ca->ca_id, CRL_NOT_YET_VALID);
+		ca->crl_status = CRL_NOT_YET_VALID;
 		PKI_RWLOCK_release_read ( &conf->crl_lock );
 		// pthread_rwlock_unlock( &crl_lock );
 		return(CRL_NOT_YET_VALID);
@@ -260,6 +222,7 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 			// pthread_rwlock_unlock( &crl_lock );
 			PKI_log_err ("CRL [%s] NEXT UPDATE error (code %d)", 
 					ca->ca_id, CRL_ERROR_NEXT_UPDATE );
+			ca->crl_status = CRL_ERROR_NEXT_UPDATE;
 			// pthread_rwlock_unlock( &crl_lock );
 			return(CRL_ERROR_NEXT_UPDATE);
 		} else if (i < 0) {
@@ -267,6 +230,7 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 			// pthread_rwlock_unlock( &crl_lock );
 			PKI_log_err ("CRL [%s] IS EXPIRED (code %d)",
 					ca->ca_id, CRL_EXPIRED );
+			ca->crl_status = CRL_EXPIRED;
 			return(CRL_EXPIRED);
 		}
 	} else {

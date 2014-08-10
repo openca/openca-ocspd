@@ -343,11 +343,49 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		// CRL to provide the response with
 		if (ca->crl_status != CRL_OK)
 		{
-			// We set the status to unknown since we don't have a valid CRL
-			PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN,
-					NULL, NULL, nextupd, CRL_REASON_UNSPECIFIED, NULL);
+			// Check the status of the CRL, if it is not valid, we return a TRY_LATER
+			// or INTERNAL_ERROR responses
+			switch(ca->crl_status)
+			{
+				case CRL_ERROR_NEXT_UPDATE:
+					// This situation does not provide any security risk, we can proceed
+					// as normal with the response building
+					break;
 
-			continue;
+				case CRL_ERROR_LAST_UPDATE:
+					// Here we do not have when the information was valid from, this is
+					// considered to be an internal error - let's report it to the client
+					if (resp) PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					if (conf->debug)
+						PKI_log_debug("sending INTERNAL ERROR (%s)", 
+							get_crl_status_info(ca->crl_status));
+					goto end;
+					break;
+
+				case CRL_NOT_YET_VALID:
+				case CRL_EXPIRED:
+					// Since the CRL is not valid, we do not have a reliable source of
+					// information for the revocation status. The client should retry
+					// later when the information will be available
+					if (resp) PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_TRYLATER);
+					if (conf->debug)
+						PKI_log_debug("sending TRYLATER (%s)", 
+							get_crl_status_info(ca->crl_status));
+					goto end;
+					break;
+
+				default:
+					// In this case we have an un-identified error, let's log it and
+					// report an internal error to the client
+					PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN,
+						NULL, NULL, nextupd, CRL_REASON_UNSPECIFIED, NULL);
+					if (conf->debug)
+						PKI_log_debug("setting CERTSTATUS UNKNOWN for serial %s (%s)", 
+							parsedSerial, get_crl_status_info(ca->crl_status));
+					continue;
+			}
 		}
 
 		// This case returns the same response for any request in case the
