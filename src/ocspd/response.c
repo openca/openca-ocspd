@@ -8,6 +8,8 @@
  
 #include "general.h"
 
+#include <stdbool.h>
+
 pthread_mutex_t sign_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef enum {
@@ -397,6 +399,46 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				NULL, NULL, nextupd, CRL_REASON_CA_COMPROMISE, NULL);
 
 			continue;
+		}
+		
+		// Here we check if the request is about a certificate that we know about, else return UNKNOWN according to CA/B Forum guideline v1.1.9
+		if (ca->serials_path != NULL)
+		{	
+			bool serial_found;
+			if( difftime(time(NULL), ca->serials_lastupdate) > ca->serials_timeout)
+			{
+				//Free existing serials list
+				SKM_sk_pop_free(PKI_INTEGER, ca->serials_list, PKI_INTEGER_free);
+				//Populate list with new serials
+				ca->serials_list = SKM_sk_new(PKI_INTEGER, PKI_INTEGER_cmp);
+				FILE *fp=fopen(ca->serials_path,"r");
+				char txt_serial[21];
+				while(fgets(txt_serial, sizeof(txt_serial), fp))
+				{
+					PKI_INTEGER* asn1_serial = PKI_INTEGER_new(strtol(txt_serial,NULL,16));
+					SKM_sk_push(PKI_INTEGER, ca->serials_list, asn1_serial);
+				}
+				pclose(fp);
+				ca->serials_lastupdate = time(NULL);
+			}
+			int i;
+			for(i = 0; i < SKM_sk_num(PKI_INTEGER, ca->serials_list); i++)
+			{
+				if(!PKI_INTEGER_cmp(SKM_sk_value(PKI_INTEGER, ca->serials_list,i), serial))
+				{	
+					serial_found = true;
+					break;
+				}
+				else
+					serial_found = false;
+			}
+			
+			if ( !serial_found )
+			{
+				PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN, NULL, thisupd, nextupd, CRL_REASON_UNSPECIFIED, NULL );
+				PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial for CA [%s]!", ca->ca_id);
+				continue;
+			}
 		}
 
 		// Get the entry from the CRL data, if NULL then the

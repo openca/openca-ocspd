@@ -536,6 +536,28 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 
 			continue;
 		}
+		
+		/* If the CA config has a filepath with the list of issued serials use it to return unknown when appropriate */
+		if ((tmp_s = PKI_CONFIG_get_value ( cnf, "/caConfig/serialsPath" )) == NULL)
+		{
+			/* No serials path provided */
+			ca->serials_path = NULL;
+		}
+		else
+		{
+			ca->serials_path = malloc(strlen(tmp_s));
+			strcpy(ca->serials_path, tmp_s);
+			if( access(ca->serials_path, R_OK) == -1 )
+			{
+				PKI_log_err ("Serials path doesn't exist and/or isn't readable for CA [%s]", ca->ca_id);
+				CA_LIST_ENTRY_free ( ca );
+				PKI_Free(tmp_s);
+				
+				continue;
+			}
+			
+			PKI_Free(tmp_s);
+		}
 
 		/* If the Server has a Token to be used with this CA, let's
                    load it */
