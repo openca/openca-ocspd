@@ -417,7 +417,8 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				while(fgets(txt_serial, sizeof(txt_serial), fp))
 				{
 					PKI_INTEGER* asn1_serial = PKI_INTEGER_new(strtol(txt_serial,NULL,16));
-					SKM_sk_push(PKI_INTEGER, ca->serials_list, asn1_serial);
+					if(asn1_serial)
+						SKM_sk_push(PKI_INTEGER, ca->serials_list, asn1_serial);
 				}
 				fclose(fp);
 				ca->serials_lastupdate = time(NULL);
