@@ -439,8 +439,13 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			{
 				char *unknownSerial = PKI_INTEGER_get_parsed(serial); 
 				resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_UNAUTHORIZED);
-				PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial [%s] for CA [%s]!", unknownSerial, ca->ca_id);
-				PKI_Free(unknownSerial);
+				if(unknownSerial)
+				{
+					PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial [%s] for CA [%s]!", unknownSerial, ca->ca_id);
+					PKI_Free(unknownSerial);
+				}
+				else
+					PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial for CA [%s]!", ca->ca_id);	
 				continue;
 			}
 		}
