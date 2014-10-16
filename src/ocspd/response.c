@@ -401,7 +401,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			continue;
 		}
 		
-		// Here we check if the request is about a certificate that we know about, else return UNKNOWN according to CA/B Forum guideline v1.1.9
+		// Here we check if the request is about a certificate that we know about, else return UNAUTHORIZED according to CA/B Forum Baseline Requirements v1.1.9
 		if (ca->serials_path != NULL)
 		{	
 			bool serial_found;
@@ -418,7 +418,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 					PKI_INTEGER* asn1_serial = PKI_INTEGER_new(strtol(txt_serial,NULL,16));
 					SKM_sk_push(PKI_INTEGER, ca->serials_list, asn1_serial);
 				}
-				pclose(fp);
+				fclose(fp);
 				ca->serials_lastupdate = time(NULL);
 			}
 			int i;
@@ -435,7 +435,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			
 			if ( !serial_found )
 			{
-				PKI_X509_OCSP_RESP_add ( resp, cid, PKI_OCSP_CERTSTATUS_UNKNOWN, NULL, thisupd, nextupd, CRL_REASON_UNSPECIFIED, NULL );
+				resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_UNAUTHORIZED);
 				PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial for CA [%s]!", ca->ca_id);
 				continue;
 			}
