@@ -410,7 +410,8 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				//Free existing serials list
 				SKM_sk_pop_free(PKI_INTEGER, ca->serials_list, PKI_INTEGER_free);
 				//Populate list with new serials
-				ca->serials_list = SKM_sk_new(PKI_INTEGER, PKI_INTEGER_cmp);
+				//cast because of limitation of STACK API to recognize ASN1_INTEGER as PKI_INTEGER
+				ca->serials_list = (STACK_OF(PKI_INTEGER)*)SKM_sk_new(PKI_INTEGER, PKI_INTEGER_cmp);
 				FILE *fp=fopen(ca->serials_path,"r");
 				char txt_serial[21];
 				while(fgets(txt_serial, sizeof(txt_serial), fp))
@@ -422,6 +423,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				ca->serials_lastupdate = time(NULL);
 			}
 			int i;
+			//PKI_INTEGER sort is broken, traverse the stack and search for the serial ourselves
 			for(i = 0; i < SKM_sk_num(PKI_INTEGER, ca->serials_list); i++)
 			{
 				if(!PKI_INTEGER_cmp(SKM_sk_value(PKI_INTEGER, ca->serials_list,i), serial))
@@ -435,8 +437,10 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			
 			if ( !serial_found )
 			{
+				char *unknownSerial = PKI_INTEGER_get_parsed(serial); 
 				resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_UNAUTHORIZED);
-				PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial for CA [%s]!", ca->ca_id);
+				PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial [%s] for CA [%s]!", unknownSerial, ca->ca_id);
+				PKI_Free(unknownSerial);
 				continue;
 			}
 		}
