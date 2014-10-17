@@ -670,8 +670,8 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 			{
 				PKI_log_debug("CRL::CA [%s] nameHash mismatch (%d)", 
 					ca->ca_id, ret);
-				continue;
 			}
+			continue;
 		}
 		else if( conf->debug ) 
 		{
@@ -684,8 +684,9 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 			{
 				PKI_log_debug("CRL::CA [%s] issuerKeyHash mismatch (%d)",
 				 	ca->ca_id, ret);
-				continue;
 			}
+			continue;
+
 		}
 		else if (conf->debug) 
 		{
