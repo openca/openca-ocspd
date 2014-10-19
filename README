@@ -111,7 +111,7 @@ In order to force CRL reloading for the configured CAs, use the following:
 Since we re-engineered the server, no extensive testing has been perfomed.
 Therefore, we encourage you to report any issue or wrong behavior.
 
-Currently the responded has been tested with Mozilla and it has been reported
+Currently the responder has been tested with Mozilla and it has been reported
 to work correctly.
 
 
