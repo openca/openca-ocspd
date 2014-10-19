@@ -415,18 +415,53 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 
 				FILE *fp=fopen(ca->serials_path,"r");
 				#define SERIALS_LINE_BUF 512
-				char *txt_serial = (char *) malloc (SERIALS_LINE_BUF);
-				while(fgets(txt_serial, SERIALS_LINE_BUF, fp))
+				char *db_line = (char *) malloc (SERIALS_LINE_BUF);
+				while(fgets(db_line, SERIALS_LINE_BUF, fp))
 				{
-					PKI_INTEGER* asn1_serial = PKI_INTEGER_new(strtol(txt_serial,NULL,16));
-					if(asn1_serial)
+					char *token, *txt_serial;
+					token = strtok(db_line, "\t");
+					if (strcmp(token, "R"))
+					{
+						strtok(NULL,"\t"); //expiration datetime
+						strtok(NULL,"\t"); //revocation datetime
+						txt_serial = strtok(NULL,"\t"); //serial
+					}
+					else
+					{
+						strtok(NULL,"\t"); //expiration datetime
+						txt_serial = strtok(NULL,"\t"); //serial
+					}
+					if (txt_serial == NULL)
+					{
+						PKI_log_err("Unable to get serial from index.txt");
+						if (resp) PKI_X509_OCSP_RESP_free(resp);
+						resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+						fclose(fp);
+						goto end;
+					}
+					long unsigned int hex_serial;
+					errno = 0;
+					hex_serial = strtol(txt_serial,NULL,16);
+					if (errno == ERANGE || hex_serial == 0L)
+					{
+						PKI_log_err("Unable to convert serial");
+						if (resp) PKI_X509_OCSP_RESP_free(resp);
+						resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+						fclose(fp);
+						goto end;
+					}
+					PKI_INTEGER* asn1_serial = PKI_INTEGER_new(hex_serial);
+					if (asn1_serial)
 						SKM_sk_push(PKI_INTEGER, ca->serials_list, asn1_serial);
+					else
+						PKI_log_err("Unable to push serial to serials stack.");
 				}
-				if ( !feof(fp) )
+				if (!feof(fp))
 				{
 					PKI_log_err("Unable to parse index.txt");
 					if (resp) PKI_X509_OCSP_RESP_free(resp);
 					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					fclose(fp);
 					goto end;
 				}
 				fclose(fp);
