@@ -1,6 +1,8 @@
-branches:
-  only:
-    - travis-ci
+before_script:
+  - git clone https://github.com/openca/libpki.git
+  - cd libpki
+  - ./configure && make && sudo make install
+#  - cp /usr/lib64/libpki* /usr
 language: c
 compiler:
   - gcc
