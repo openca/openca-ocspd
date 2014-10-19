@@ -4,4 +4,4 @@ branches:
 language: c
 compiler:
   - gcc
-script: automake && ./configure && make
+script: ./configure && make
