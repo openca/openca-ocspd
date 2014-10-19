@@ -1,0 +1,7 @@
+branches:
+  only:
+    - travis-ci
+language: c
+compiler:
+  - gcc
+script: automake && ./configure && make
