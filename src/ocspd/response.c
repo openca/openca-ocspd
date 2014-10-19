@@ -412,13 +412,22 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				//Populate list with new serials
 				//cast because of limitation of STACK API to recognize ASN1_INTEGER as PKI_INTEGER
 				ca->serials_list = (STACK_OF(PKI_INTEGER)*)SKM_sk_new(PKI_INTEGER, PKI_INTEGER_cmp);
+
 				FILE *fp=fopen(ca->serials_path,"r");
-				char txt_serial[21];
-				while(fgets(txt_serial, sizeof(txt_serial), fp))
+				#define SERIALS_LINE_BUF 512
+				char *txt_serial = (char *) malloc (SERIALS_LINE_BUF);
+				while(fgets(txt_serial, SERIALS_LINE_BUF, fp))
 				{
 					PKI_INTEGER* asn1_serial = PKI_INTEGER_new(strtol(txt_serial,NULL,16));
 					if(asn1_serial)
 						SKM_sk_push(PKI_INTEGER, ca->serials_list, asn1_serial);
+				}
+				if ( !feof(fp) )
+				{
+					PKI_log_err("Unable to parse index.txt");
+					if (resp) PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					goto end;
 				}
 				fclose(fp);
 				ca->serials_lastupdate = time(NULL);
