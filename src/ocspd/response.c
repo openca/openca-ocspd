@@ -401,7 +401,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			continue;
 		}
 		
-		// Here we check if the request is about a certificate that we know about, else return UNAUTHORIZED according to CA/B Forum Baseline Requirements v1.1.9
+		// Here we check if the request is about a certificate that we know about, else return EXTENDED REVOCATION according to CA/B Forum Baseline Requirements v1.1.9 and RFC6960 Section 2.2
 		if (ca->serials_path != NULL)
 		{	
 			bool serial_found;
@@ -483,15 +483,24 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			if ( !serial_found )
 			{
 				char *unknownSerial = PKI_INTEGER_get_parsed(serial); 
-				resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_UNAUTHORIZED);
+				PKI_TIME *extended_revocation_time = (PKI_TIME*) ASN1_GENERALIZED_TIME_set(NULL, (time_t)0);
+				if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
+						extended_revocation_time, thisupd, nextupd, CRL_REASON_CERTIFICATE_HOLD, NULL )) == PKI_ERR)
+				{
+					PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+				}
+
 				if(unknownSerial)
 				{
 					PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial [%s] for CA [%s]!", unknownSerial, ca->ca_id);
 					PKI_Free(unknownSerial);
 				}
 				else
+				{
 					PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial for CA [%s]!", ca->ca_id);	
-				continue;
+				}
+				goto end;
 			}
 		}
 
