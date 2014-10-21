@@ -420,7 +420,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				{
 					char *token, *txt_serial;
 					token = strtok(db_line, "\t");
-					if (strcmp(token, "R"))
+					if (!strcmp(token, "R"))
 					{
 						strtok(NULL,"\t"); //expiration datetime
 						strtok(NULL,"\t"); //revocation datetime
