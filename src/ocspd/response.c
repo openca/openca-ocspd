@@ -407,6 +407,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			bool serial_found;
 			if( difftime(time(NULL), ca->serials_lastupdate) > ca->serials_timeout)
 			{
+				PKI_log(PKI_LOG_INFO, "Reloading index.txt.");
 				//Free existing serials list
 				SKM_sk_pop_free(PKI_INTEGER, ca->serials_list, PKI_INTEGER_free);
 				//Populate list with new serials
