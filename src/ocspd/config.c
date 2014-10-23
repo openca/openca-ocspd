@@ -545,7 +545,13 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 		}
 		else
 		{
-			ca->serials_path = malloc(strlen(tmp_s));
+			ca->serials_path = malloc(strlen(tmp_s) + 1);
+			if (ca->serials_path == NULL)
+			{
+				PKI_log_err("Error allocating memory for serials path!");
+				PKI_Free(tmp_s);
+				continue;
+			}
 			strcpy(ca->serials_path, tmp_s);
 			if( access(ca->serials_path, R_OK) == -1 )
 			{
