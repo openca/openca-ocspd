@@ -537,7 +537,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			continue;
 		}
 		
-		/* If the CA config has a filepath with the list of issued serials use it to return unknown when appropriate */
+		/* If the CA config has a filepath with the list of issued serials use it to return extended-revoke when appropriate */
 		if ((tmp_s = PKI_CONFIG_get_value ( cnf, "/caConfig/serialsPath" )) == NULL)
 		{
 			/* No serials path provided */
@@ -564,7 +564,21 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			
 			PKI_Free(tmp_s);
 		}
+		/* If the CA config has a specified serials timeout period use it, else use a default of 5 mins. */
+		if((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/serialsTimeout")) != NULL)
+		{
+			int seconds = 0;
+			if((seconds = atoi( tmp_s )) > 0 ) 
+			{
+				ca->serials_timeout = seconds;
+			}
 
+			PKI_Free(tmp_s);
+		}
+		else
+		{
+			ca->serials_timeout = 5 * 60;
+		}
 		/* If the Server has a Token to be used with this CA, let's
                    load it */
 		if((tmp_s = PKI_CONFIG_get_value ( cnf, "/caConfig/serverToken" )) == NULL)
