@@ -485,11 +485,18 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				char *unknownSerial = PKI_INTEGER_get_parsed(serial); 
 				//return extended revocation as per RFC6960
 				PKI_TIME *extended_revocation_time = PKI_TIME_set(NULL, (time_t)0);
-				if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
+				if (extended_revocation_time == NULL)
+				{
+					PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					PKI_log_err("Error setting the revocation time.")
+				}
+				else if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
 						extended_revocation_time, thisupd, nextupd, CRL_REASON_CERTIFICATE_HOLD, NULL )) == PKI_ERR)
 				{
 					PKI_X509_OCSP_RESP_free(resp);
 					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					PKI_log_err("Error adding the response.")
 				}
 
 				if(unknownSerial)
