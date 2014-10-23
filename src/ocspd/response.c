@@ -484,7 +484,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			{
 				char *unknownSerial = PKI_INTEGER_get_parsed(serial); 
 				//return extended revocation as per RFC6960
-				PKI_TIME *extended_revocation_time = (PKI_TIME*) ASN1_GENERALIZED_TIME_set(NULL, (time_t)0);
+				PKI_TIME *extended_revocation_time = PKI_TIME_set(NULL, (time_t)0);
 				if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
 						extended_revocation_time, thisupd, nextupd, CRL_REASON_CERTIFICATE_HOLD, NULL )) == PKI_ERR)
 				{
