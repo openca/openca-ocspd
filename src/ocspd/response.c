@@ -411,7 +411,10 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				pthread_mutex_lock(&serials_mutex);
 				//Check if the serials where updated while waiting for lock
 				if ( difftime(time(NULL), ca->serials_lastupdate) > ca->serials_timeout)
+				{	
+					pthread_mutex_unlock(&serials_mutex);
 					goto skipserialsreload;
+				}
 				PKI_log(PKI_LOG_INFO, "Reloading index.txt.");
 				//Free existing serials listi
 				if(ca->serials_list != NULL)
