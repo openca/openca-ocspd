@@ -11,6 +11,7 @@
 #include <stdbool.h>
 
 pthread_mutex_t sign_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t serials_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef enum {
 	OCSPD_INFO_UNKNOWN_STATUS     = 0,
@@ -404,12 +405,20 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		// Here we check if the request is about a certificate that we know about, else return EXTENDED REVOCATION according to CA/B Forum Baseline Requirements v1.1.9 and RFC6960 Section 2.2
 		if (ca->serials_path != NULL)
 		{	
-			bool serial_found;
+			bool serial_found = false;
 			if( difftime(time(NULL), ca->serials_lastupdate) > ca->serials_timeout)
 			{
+				pthread_mutex_lock(&serials_mutex);
+				//Check if the serials where updated while waiting for lock
+				if ( difftime(time(NULL), ca->serials_lastupdate) > ca->serials_timeout)
+					goto skipserialsreload;
 				PKI_log(PKI_LOG_INFO, "Reloading index.txt.");
-				//Free existing serials list
-				SKM_sk_pop_free(PKI_INTEGER, ca->serials_list, PKI_INTEGER_free);
+				//Free existing serials listi
+				if(ca->serials_list != NULL)
+				{
+					SKM_sk_pop_free(PKI_INTEGER, ca->serials_list, PKI_INTEGER_free);
+					ca->serials_list = NULL;
+				}
 				//Populate list with new serials
 				//cast because of limitation of STACK API to recognize ASN1_INTEGER as PKI_INTEGER
 				ca->serials_list = (STACK_OF(PKI_INTEGER)*)SKM_sk_new(PKI_INTEGER, PKI_INTEGER_cmp);
@@ -440,9 +449,9 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 						fclose(fp);
 						goto end;
 					}
-					long unsigned int hex_serial;
+					long long unsigned int hex_serial;
 					errno = 0;
-					hex_serial = strtol(txt_serial,NULL,16);
+					hex_serial = strtoull(txt_serial,NULL,16);
 					if (errno == ERANGE || hex_serial == 0L)
 					{
 						PKI_log_err("Unable to convert serial");
@@ -467,7 +476,9 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				}
 				fclose(fp);
 				ca->serials_lastupdate = time(NULL);
+				pthread_mutex_unlock(&serials_mutex);
 			}
+skipserialsreload:
 			int i;
 			//PKI_INTEGER sort is broken, traverse the stack and search for the serial ourselves
 			for(i = 0; i < SKM_sk_num(PKI_INTEGER, ca->serials_list); i++)
