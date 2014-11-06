@@ -478,7 +478,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				ca->serials_lastupdate = time(NULL);
 				pthread_mutex_unlock(&serials_mutex);
 			}
-skipserialsreload:
+skipserialsreload:;
 			int i;
 			//PKI_INTEGER sort is broken, traverse the stack and search for the serial ourselves
 			for(i = 0; i < SKM_sk_num(PKI_INTEGER, ca->serials_list); i++)
