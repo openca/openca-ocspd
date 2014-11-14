@@ -1,8 +1,0 @@
-before_script:
-  - git clone https://github.com/openca/libpki.git
-  - cd libpki && ./configure && make && sudo make install && cd -
-#  - cp /usr/lib64/libpki* /usr
-language: c
-compiler:
-  - gcc
-script: ./configure && make
