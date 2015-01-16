@@ -8,7 +8,10 @@
  
 #include "general.h"
 
+#include <stdbool.h>
+
 pthread_mutex_t sign_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t serials_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef enum {
 	OCSPD_INFO_UNKNOWN_STATUS     = 0,
@@ -398,6 +401,132 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				NULL, NULL, nextupd, CRL_REASON_CA_COMPROMISE, NULL);
 
 			continue;
+		}
+		
+		// Here we check if the request is about a certificate that we know about, else return EXTENDED REVOCATION according to CA/B Forum Baseline Requirements v1.1.9 and RFC6960 Section 2.2
+		if (ca->serials_path != NULL)
+		{	
+			bool serial_found = false;
+			if( difftime(time(NULL), ca->serials_lastupdate) > ca->serials_timeout)
+			{
+				pthread_mutex_lock(&serials_mutex);
+				//Check if the serials where updated while waiting for lock
+				if ( difftime(time(NULL), ca->serials_lastupdate) > ca->serials_timeout)
+				{	
+					pthread_mutex_unlock(&serials_mutex);
+					goto skipserialsreload;
+				}
+				PKI_log(PKI_LOG_INFO, "Reloading index.txt.");
+				//Free existing serials listi
+				if(ca->serials_list != NULL)
+				{
+					SKM_sk_pop_free(PKI_INTEGER, ca->serials_list, PKI_INTEGER_free);
+					ca->serials_list = NULL;
+				}
+				//Populate list with new serials
+				//cast because of limitation of STACK API to recognize ASN1_INTEGER as PKI_INTEGER
+				ca->serials_list = (STACK_OF(PKI_INTEGER)*)SKM_sk_new(PKI_INTEGER, PKI_INTEGER_cmp);
+
+				FILE *fp=fopen(ca->serials_path,"r");
+				#define SERIALS_LINE_BUF 512
+				char *db_line = (char *) malloc (SERIALS_LINE_BUF);
+				while(fgets(db_line, SERIALS_LINE_BUF, fp))
+				{
+					char *token, *txt_serial;
+					token = strtok(db_line, "\t");
+					if (!strcmp(token, "R"))
+					{
+						strtok(NULL,"\t"); //expiration datetime
+						strtok(NULL,"\t"); //revocation datetime
+						txt_serial = strtok(NULL,"\t"); //serial
+					}
+					else
+					{
+						strtok(NULL,"\t"); //expiration datetime
+						txt_serial = strtok(NULL,"\t"); //serial
+					}
+					if (txt_serial == NULL)
+					{
+						PKI_log_err("Unable to get serial from index.txt");
+						if (resp) PKI_X509_OCSP_RESP_free(resp);
+						resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+						fclose(fp);
+						goto end;
+					}
+					long long unsigned int hex_serial;
+					errno = 0;
+					hex_serial = strtoull(txt_serial,NULL,16);
+					if (errno == ERANGE || hex_serial == 0L)
+					{
+						PKI_log_err("Unable to convert serial");
+						if (resp) PKI_X509_OCSP_RESP_free(resp);
+						resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+						fclose(fp);
+						goto end;
+					}
+					PKI_INTEGER* asn1_serial = PKI_INTEGER_new(hex_serial);
+					if (asn1_serial)
+						SKM_sk_push(PKI_INTEGER, ca->serials_list, asn1_serial);
+					else
+						PKI_log_err("Unable to push serial to serials stack.");
+				}
+				if (!feof(fp))
+				{
+					PKI_log_err("Unable to parse index.txt");
+					if (resp) PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					fclose(fp);
+					goto end;
+				}
+				fclose(fp);
+				ca->serials_lastupdate = time(NULL);
+				pthread_mutex_unlock(&serials_mutex);
+			}
+skipserialsreload:;
+			int i;
+			//PKI_INTEGER sort is broken, traverse the stack and search for the serial ourselves
+			for(i = 0; i < SKM_sk_num(PKI_INTEGER, ca->serials_list); i++)
+			{
+				if(!PKI_INTEGER_cmp(SKM_sk_value(PKI_INTEGER, ca->serials_list,i), serial))
+				{	
+					serial_found = true;
+					break;
+				}
+				else
+					serial_found = false;
+			}
+			
+			if ( !serial_found )
+			{
+				char *unknownSerial = PKI_INTEGER_get_parsed(serial); 
+				//return extended revocation as per RFC6960
+				PKI_TIME *extended_revocation_time = PKI_TIME_new(0);
+				extended_revocation_time = PKI_TIME_set(extended_revocation_time, (time_t)0);
+				if (extended_revocation_time == NULL)
+				{
+					PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					PKI_log_err("Error setting the revocation time.");
+				}
+				else if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
+						extended_revocation_time, thisupd, nextupd, CRL_REASON_CERTIFICATE_HOLD, NULL )) == PKI_ERR)
+				{
+					PKI_X509_OCSP_RESP_free(resp);
+					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+					PKI_log_err("Error adding the response.");
+				}
+
+				if(unknownSerial)
+				{
+					PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial [%s] for CA [%s]!", unknownSerial, ca->ca_id);
+					PKI_Free(unknownSerial);
+				}
+				else
+				{
+					PKI_log(PKI_LOG_ALWAYS, "SECURITY:: Received request for UNKNOWN certificate serial for CA [%s]!", ca->ca_id);	
+				}
+				continue;
+			}
 		}
 
 		// Get the entry from the CRL data, if NULL then the

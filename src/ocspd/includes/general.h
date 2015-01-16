@@ -135,6 +135,16 @@ typedef struct ca_list_st
 
 		/* Pointer to the list of CRLs entries */
 		STACK_OF(X509_REVOKED) *crl_list;
+		
+		/* List of issued certificates path */
+		char *serials_path;
+
+		/* Pointer to list of known serials */
+		STACK_OF(PKI_INTEGER) *serials_list;
+
+		/* Issued certs list lastupdate and timeout in seconds */
+		time_t serials_lastupdate;
+		time_t serials_timeout;
 
 		/* X509 nextUpdate and lastUpdate */
 		PKI_TIME *nextUpdate;
