@@ -3,7 +3,7 @@
 ## All Rights Reserved
 
 TOP = ..
-include $(TOP)/global-vars
+-include $(TOP)/global-vars
 
 sbin_PROGRAMS = ocspd
 

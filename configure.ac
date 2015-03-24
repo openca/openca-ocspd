@@ -5,7 +5,7 @@ AC_REVISION($Revision: 1.4 $)
 AC_COPYRIGHT([Copyright 2007-2014 by Massimiliano Pala and OpenCA Labs])
 
 dnl Autoconf
-AC_INIT(openca-ocspd, 3.1.0, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
+AC_INIT(openca-ocspd, 3.1.1, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
 
 dnl Some variables
 VERSION=$PACKAGE_VERSION
