@@ -27,10 +27,8 @@ static const char *statusInfo[] = {
 		NULL
 };
 
-int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CERT *signCert, PKI_X509_CERT *caCert)
+int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CERT *signCert, PKI_X509_CERT *caCert, PKI_TOKEN *tk)
 {
-	PKI_TOKEN *tk = NULL;
-
 	PKI_DIGEST_ALG * sign_dgst = NULL;
 	PKI_OCSP_RESP  * r = NULL;
 
@@ -48,10 +46,13 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 	if (!r->bs) return PKI_OK;
 
 	// Let's get the default token for signing
-	if ((tk = conf->token) == NULL)
+	if (tk == NULL)
 	{
-		PKI_log_err("CA Token is empty, can not sign response!");
-		return PKI_ERR;
+		if ((tk = conf->token) == NULL)
+		{
+			PKI_log_err("CA Token is empty, can not sign response!");
+			return PKI_ERR;
+		}
 	}
 
 	// Sign the response only if we have a valid pkey pointer!
@@ -497,7 +498,7 @@ end:
 	// Now we need to sign the response
 	if (resp != NULL && signResponse == 1)
 	{
-		if (sign_ocsp_response(resp, conf, signCert, caCert) != PKI_OK)
+		if (sign_ocsp_response(resp, conf, signCert, caCert, tk) != PKI_OK)
 		{
 			// Free the current response, and generate the appropriate error
 			PKI_X509_OCSP_RESP_free(resp);
@@ -675,8 +676,8 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 			{
 				PKI_log_debug("CRL::CA [%s] nameHash mismatch (%d)", 
 					ca->ca_id, ret);
-				continue;
 			}
+			continue;
 		}
 		else if( conf->debug ) 
 		{
@@ -689,8 +690,9 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 			{
 				PKI_log_debug("CRL::CA [%s] issuerKeyHash mismatch (%d)",
 				 	ca->ca_id, ret);
-				continue;
 			}
+			continue;
+
 		}
 		else if (conf->debug) 
 		{

@@ -214,27 +214,29 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 		return(CRL_NOT_YET_VALID);
 	}
                                                                                 
-	if(ca->nextUpdate) {
-		i=X509_cmp_time(ca->nextUpdate, NULL);
-                                                                                
-		if (i == 0) {
-			PKI_RWLOCK_release_read ( &conf->crl_lock );
-			// pthread_rwlock_unlock( &crl_lock );
-			PKI_log_err ("CRL [%s] NEXT UPDATE error (code %d)", 
-					ca->ca_id, CRL_ERROR_NEXT_UPDATE );
-			ca->crl_status = CRL_ERROR_NEXT_UPDATE;
-			// pthread_rwlock_unlock( &crl_lock );
-			return(CRL_ERROR_NEXT_UPDATE);
-		} else if (i < 0) {
-			PKI_RWLOCK_release_read ( &conf->crl_lock );
-			// pthread_rwlock_unlock( &crl_lock );
-			PKI_log_err ("CRL [%s] IS EXPIRED (code %d)",
-					ca->ca_id, CRL_EXPIRED );
-			ca->crl_status = CRL_EXPIRED;
-			return(CRL_EXPIRED);
+	if(!conf->crl_reload_expired) {
+		if(ca->nextUpdate) {
+			i=X509_cmp_time(ca->nextUpdate, NULL);
+                                                                                  
+			if (i == 0) {
+				PKI_RWLOCK_release_read ( &conf->crl_lock );
+				// pthread_rwlock_unlock( &crl_lock );
+				PKI_log_err ("CRL [%s] NEXT UPDATE error (code %d)", 
+						ca->ca_id, CRL_ERROR_NEXT_UPDATE );
+				ca->crl_status = CRL_ERROR_NEXT_UPDATE;
+				// pthread_rwlock_unlock( &crl_lock );
+				return(CRL_ERROR_NEXT_UPDATE);
+			} else if (i < 0) {
+				PKI_RWLOCK_release_read ( &conf->crl_lock );
+				// pthread_rwlock_unlock( &crl_lock );
+				PKI_log_err ("CRL [%s] IS EXPIRED (code %d)",
+						ca->ca_id, CRL_EXPIRED );
+				ca->crl_status = CRL_EXPIRED;
+				return(CRL_EXPIRED);
+			}
+		} else {
+			PKI_log_err ("CRL [%s] has no nextUpdate!", ca->ca_id );
 		}
-	} else {
-		PKI_log_err ("CRL [%s] has no nextUpdate!", ca->ca_id );
 	}
 
 	PKI_RWLOCK_release_read ( &conf->crl_lock );
