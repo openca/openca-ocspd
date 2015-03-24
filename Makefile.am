@@ -50,8 +50,7 @@ EXTRA_SCRIPTS = \
 	contrib/build-rpm.sh \
 	contrib/openca-ocspd.spec
 
-EXTRA_EXAMPLES = examples/index.txt examples/start.sh examples/request.sh \
-	examples/ocspd.conf
+EXTRA_EXAMPLES = 
 
 INCLUDE_DIST = 
 

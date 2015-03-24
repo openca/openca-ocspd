@@ -17,8 +17,6 @@
 # OpenCA-OCSPD (Makefile)
 # (c) 2000-2009 by OpenCA Labs and Massimiliano Pala
 # OpenCA Licensed Software - All rights Reserved
-
-# src/global-vars.in
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -212,7 +210,7 @@ EXEEXT = @EXEEXT@
 EXTRA_CFLAGS = @EXTRA_CFLAGS@
 FGREP = @FGREP@
 GREP = @GREP@
-INSTALL = ${install_sh_PROGRAM}
+INSTALL = @INSTALL@
 INSTALL_BUILDER = @INSTALL_BUILDER@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -243,15 +241,13 @@ PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
-PACKAGE_VERSION = @PKG_VER@
+PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PKGMK = @PKGMK@
 PKG_MIN = @PKG_MIN@
 PKG_VER = @PKG_VER@
 POD2HTML = @POD2HTML@
-
-# ================================================
 POD2MAN = @POD2MAN@
 RANLIB = @RANLIB@
 RC = @RC@
@@ -260,7 +256,7 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-VERSION = @PKG_VER@
+VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -295,7 +291,7 @@ host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
 htmldir = @htmldir@
-includedir = ${exec_prefix}/include
+includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
@@ -335,40 +331,6 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 user = @user@
-TODAY = @TODAY@
-etc_prefix = $(DESTDIR)${exec_prefix}/etc
-lib_prefix = $(DESTDIR)@libdir@
-var_prefix = $(DESTDIR)${exec_prefix}/var
-doc_prefix = $(DESTDIR)${datadir}/openca-prqpd
-DEST_SBINDIR = $(DESTDIR)@sbindir@
-DEST_BINDIR = $(DESTDIR)@bindir@
-DEST_LIBDIR = $(DESTDIR)@libdir@
-DEST_DATADIR = @datadir@
-DEST_INFODIR = @infodir@
-DEST_MANDIR = @mandir@
-
-#-------- for distribution building: --------
-dist_user = @dist_user@
-dist_group = @dist_group@
-package_build = @package_build@
-GZIP = @GZIP@
-TAR = @TAR@
-PWD = @PWD@
-MKDIR = @MKDIR@
-CHOWN = @CHOWN@
-ECHO = @ECHO@
-CAT = @CAT@
-MV = @MV@
-CP = @CP@
-RM = rm
-
-# =================================================
-SYSTEM_CFLAGS = @sys_cflags@
-SYSTEM_LIBS = @sys_ldlibs@
-
-# =================================================
-LIBPKI_CFLAGS = ${sys_cflags} ${pkicflags}
-LIBPKI_LDLIBS = ${sys_ldlibs} ${pkildlibs}
 SUBDIRS = ocspd
 all: all-recursive
 
@@ -683,32 +645,6 @@ uninstall-am:
 	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
 	ps ps-am tags tags-am uninstall uninstall-am
 
-
-#-------- build and utility programs: --------
-
-@SET_MAKE@
-
-__install_dir::
-	@if test -z "$(DIR)"; then $(MAKE) default; \
-	else \
-	    if test ! -d $(DIR); then \
-		$(MAKE) __install_dir DIR=`dirname $(DIR)`; \
-		if test -n "$(MODE)"; then \
-			set -x; \
-			$(INSTALL) -d -o $(USER) -g $(GROUP) -m $(MODE) $(DIR); \
-		else \
-			set -x; \
-			$(INSTALL) -d -o $(USER) -g $(GROUP) $(DIR); \
-		fi; \
-	    fi; \
-	fi;
-
-__install_ln_s::
-	if test -z "$(TARGET)"; then $(MAKE) default; \
-	else \
-	    $(TOP)/relative_ln_s.sh $(TARGET) $(LINK); \
-	    chown -h $(USER):$(GROUP) $(LINK); \
-	fi;
 
 # dnl EXTRA_DIST = \
 # 	includes/*.*
