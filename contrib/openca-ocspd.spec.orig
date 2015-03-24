@@ -58,7 +58,7 @@
 %define rel     	%{?CUSTOM_RELEASE} %{!?CUSTOM_RELEASE:%RELEASE}
 %define prefix   	/usr
 %define mand		/usr/man
-%define libpki_req 	0.6.3
+%define libpki_req 	0.8.8
 
 %define working_release %rel.%{disttag}%{distver}
 

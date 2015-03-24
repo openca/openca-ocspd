@@ -13112,7 +13112,7 @@ pkildlibs="`${libpki_config} --libs`"
 pkiversion=`${libpki_config} --version`
 pkiversion_num=`echo $pkiversion | sed "s|\.||g"`
 
-pkirequired="0.8.5"
+pkirequired="0.8.8"
 pkirequired_num=`echo $pkirequired | sed "s|\.||g"`
 
 if [ $pkiversion_num -lt $pkirequired_num ] ; then
