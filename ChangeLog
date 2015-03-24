@@ -1,4 +1,7 @@
-* Aut 09 2014 Massimiliano Pala <madwolf@openca.org>
+* Mar 24 2015 Massimiliano Pala <madwolf@openca.org>
+- Modified behavior by providing normal responses if crlValidityCheck is 0
+
+* Aug 09 2014 Massimiliano Pala <madwolf@openca.org>
 - Added check for the same pubkey in cert and keypair (debug mode)
 - Added better support for CRL status checking when building responses
 

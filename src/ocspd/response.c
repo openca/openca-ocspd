@@ -368,12 +368,18 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 					// Since the CRL is not valid, we do not have a reliable source of
 					// information for the revocation status. The client should retry
 					// later when the information will be available
-					if (resp) PKI_X509_OCSP_RESP_free(resp);
-					resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_TRYLATER);
-					if (conf->debug)
-						PKI_log_debug("sending TRYLATER (%s)", 
-							get_crl_status_info(ca->crl_status));
-					goto end;
+					//
+					// NOTE: if the crlCheckValidity is set to <= 0, then we produce
+					//       the response as if the CRL was valid
+					if (conf->crl_check_validity > 0) 
+					{
+						if (resp) PKI_X509_OCSP_RESP_free(resp);
+						resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_TRYLATER);
+						if (conf->debug)
+							PKI_log_debug("sending TRYLATER (%s)", 
+								get_crl_status_info(ca->crl_status));
+						goto end;
+					}
 					break;
 
 				default:
