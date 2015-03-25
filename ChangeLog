@@ -1,3 +1,7 @@
+* Mar 25 2015 Massimiliano Pala <madwolf@openca.org>
+- Added the responderIdType option for CA configuration
+- Removed not-used addResponderKeyID option for OCSP responder config
+
 * Mar 24 2015 Massimiliano Pala <madwolf@openca.org>
 - Modified behavior by providing normal responses if crlValidityCheck is 0
 
