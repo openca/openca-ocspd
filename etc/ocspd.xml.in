@@ -59,9 +59,6 @@
       <!-- Digest Algorithm to be used when signing responses, currently
            for some CISCO devices SHA1 is the only supported algorithm -->
       <pki:signatureDigestAlgorithm>SHA1</pki:signatureDigestAlgorithm>
-      <!-- Set this option if you want to include the KeyID. If you are
-           unsure about this setting, use 'yes'. -->
-      <pki:addResponseKeyID>yes</pki:addResponseKeyID>
       <!-- Validity Period of responses, clients are not supposed to ask
            informations about the same CA within this validity period
            If the two options are both set to '0' the 'nextUpdate' field

@@ -28,6 +28,12 @@
         the serverToken is used, it has the precedence over the serverCertUrl
         one -->
    <!-- <pki:serverToken></pki:serverToken> -->
+   <!-- This allows for setting the responderIdType for the responder. The allowed
+	values are:
+	- 'name' for using the hash of the signer's certificate name
+	- 'keyid' for using the hash of the signer's public key
+	The default value (if not set) is to use the name identifier -->
+   <pki:responderIdType>name</pki:responderIdType>
    <!-- In case a CA is compromised, set this option to yes. All the
         responses for this CA will carry the caCompromised flag. -->
    <pki:caCompromised>no</pki:caCompromised>

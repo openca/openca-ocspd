@@ -2,10 +2,10 @@ dnl -*- mode: m4; -*-
 dnl Process this file with autoconf to produce a configure script.
 AC_REVISION($Revision: 1.4 $)
 
-AC_COPYRIGHT([Copyright 2007-2014 by Massimiliano Pala and OpenCA Labs])
+AC_COPYRIGHT([Copyright 2007-2015 by Massimiliano Pala and OpenCA Labs])
 
 dnl Autoconf
-AC_INIT(openca-ocspd, 3.1.1, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
+AC_INIT(openca-ocspd, 3.1.2, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
 
 dnl Some variables
 VERSION=$PACKAGE_VERSION

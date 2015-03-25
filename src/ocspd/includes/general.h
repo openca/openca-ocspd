@@ -110,51 +110,53 @@ typedef struct ca_entry_certid
 #define sk_CA_ENTRY_CERTID_find(st) SKM_sk_find(CA_ENTRY_CERTID, (st))
 
 /* List of available CAs */
-typedef struct ca_list_st
-	{
-		/* CA Identifier - Name from config file */
-		char *ca_id;
+typedef struct ca_list_st {
+	/* CA Identifier - Name from config file */
+	char *ca_id;
 
-		/* CA Status - If compromised > 0 respond all revoked */
-		int compromised;
+	/* CA Status - If compromised > 0 respond all revoked */
+	int compromised;
 
-		/* CA certificate */
-		PKI_X509_CERT *ca_cert;
+	/* CA certificate */
+	PKI_X509_CERT *ca_cert;
 
-		/* Cert Identifier */
-		CA_ENTRY_CERTID *cid;
+	/* Cert Identifier */
+	CA_ENTRY_CERTID *cid;
 
-		/* CA certificate URL */
-		URL *ca_url;
+	/* CA certificate URL */
+	URL *ca_url;
 
-		/* CRL URL */
-		URL *crl_url;
+	/* CRL URL */
+	URL *crl_url;
 
-		/* CRL data */
-		PKI_X509_CRL *crl;
+	/* CRL data */
+	PKI_X509_CRL *crl;
 
-		/* Pointer to the list of CRLs entries */
-		STACK_OF(X509_REVOKED) *crl_list;
+	/* Pointer to the list of CRLs entries */
+	STACK_OF(X509_REVOKED) *crl_list;
 
-		/* X509 nextUpdate and lastUpdate */
-		PKI_TIME *nextUpdate;
-		PKI_TIME *lastUpdate;
+	/* X509 nextUpdate and lastUpdate */
+	PKI_TIME *nextUpdate;
+	PKI_TIME *lastUpdate;
 
-		/* Options for auto reloading of CRL upon expiration */
-		int crl_status;
+	/* Options for auto reloading of CRL upon expiration */
+	int crl_status;
 
-		/* Number of entries present in the list */
-		unsigned long entries_num;
+	/* Number of entries present in the list */
+	unsigned long entries_num;
 
-		/* TOKEN to be used with this CA - if null, the default
-                 * one will be used */
-		PKI_X509_CERT *server_cert;
+	/* TOKEN to be used with this CA - if null, the default
+         * one will be used */
+	PKI_X509_CERT *server_cert;
 
-		char *token_name;
-		char *token_config_dir;
-		PKI_TOKEN *token;
+	char *token_name;
+	char *token_config_dir;
+	PKI_TOKEN *token;
+	
+	/* Responder Identifier Type */
+	int response_id_type;
 
-	} CA_LIST_ENTRY;
+} CA_LIST_ENTRY;
 
 typedef struct {
 	pthread_t thread_tid;
@@ -193,7 +195,6 @@ typedef struct ocspd_config {
 	int nmin;
 	int ndays;
 	int set_nextUpdate;
-	int add_response_keyid;
 
 	int flags;
 

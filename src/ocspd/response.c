@@ -27,7 +27,8 @@ static const char *statusInfo[] = {
 		NULL
 };
 
-int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CERT *signCert, PKI_X509_CERT *caCert, PKI_TOKEN *tk)
+int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CERT *signCert, 
+		       PKI_X509_CERT *caCert, PKI_TOKEN *tk, PKI_X509_OCSP_RESPID_TYPE resp_id_type)
 {
 	PKI_DIGEST_ALG * sign_dgst = NULL;
 	PKI_OCSP_RESP  * r = NULL;
@@ -106,7 +107,9 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 	}
 
 	// Now generate the signature for the response
-	sig_rv = PKI_X509_OCSP_RESP_sign(resp, tk->keypair, signCert, caCert, tk->otherCerts, sign_dgst);
+	sig_rv = PKI_X509_OCSP_RESP_sign(resp, tk->keypair, signCert, 
+					 caCert, tk->otherCerts, 
+					 sign_dgst, resp_id_type);
 
 	// Checks the return code and report the error (if any)
 	if (sig_rv != PKI_OK)
@@ -205,6 +208,8 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 
 	PKI_X509_OCSP_RESP *resp = NULL;
 	PKI_X509_OCSP_REQ_VALUE *req_val = NULL;
+
+	PKI_X509_OCSP_RESPID_TYPE resp_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_NAME;
 
 	PKI_TOKEN *tk = NULL;
 
@@ -338,6 +343,9 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			}
 			else signCert = NULL;
 		}
+
+		// Response Id Type
+		resp_id_type = ca->response_id_type;
 
 		// Here we check for the case where the CRL status is not ok, so
 		// we ask the client to try later, hopefully when we have a valid
@@ -498,7 +506,7 @@ end:
 	// Now we need to sign the response
 	if (resp != NULL && signResponse == 1)
 	{
-		if (sign_ocsp_response(resp, conf, signCert, caCert, tk) != PKI_OK)
+		if (sign_ocsp_response(resp, conf, signCert, caCert, tk, resp_id_type) != PKI_OK)
 		{
 			// Free the current response, and generate the appropriate error
 			PKI_X509_OCSP_RESP_free(resp);
