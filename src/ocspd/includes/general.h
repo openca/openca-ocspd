@@ -102,12 +102,26 @@ typedef struct ca_entry_certid
 	} CA_ENTRY_CERTID;
 
 #define sk_CA_ENTRY_CERTID_new_null() SKM_sk_new_null(CA_ENTRY_CERTID)
+#define sk_CA_ENTRY_CERTID_free(st) SKM_sk_free(CA_ENTRY_CERTID, (st))
 #define sk_CA_ENTRY_CERTID_push(st, val) SKM_sk_push(CA_ENTRY_CERTID, (st), (val))
 #define sk_CA_ENTRY_CERTID_pop(st) SKM_sk_pop(CA_ENTRY_CERTID, (st))
 #define sk_CA_ENTRY_CERTID_value(st, i) SKM_sk_value(CA_ENTRY_CERTID, (st), (i))
 #define sk_CA_ENTRY_CERTID_num(st) SKM_sk_num(CA_ENTRY_CERTID, (st))
 #define sk_CA_ENTRY_CERTID_sort(st) SKM_sk_sort(CA_ENTRY_CERTID, (st))
 #define sk_CA_ENTRY_CERTID_find(st) SKM_sk_find(CA_ENTRY_CERTID, (st))
+
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+DECLARE_STACK_OF(EVP_MD)
+DECLARE_ASN1_SET_OF(EVP_MD)
+#define sk_EVP_MD_new_null() SKM_sk_new_null(EVP_MD)
+#define sk_EVP_MD_free(st) SKM_sk_free(EVP_MD, (st))
+#define sk_EVP_MD_push(st, val) SKM_sk_push(EVP_MD, (st), (val))
+#define sk_EVP_MD_pop(st) SKM_sk_pop(EVP_MD, (st))
+#define sk_EVP_MD_value(st, i) SKM_sk_value(EVP_MD, (st), (i))
+#define sk_EVP_MD_num(st) SKM_sk_num(EVP_MD, (st))
+#define sk_EVP_MD_sort(st) SKM_sk_sort(EVP_MD, (st))
+#define sk_EVP_MD_find(st) SKM_sk_find(EVP_MD, (st))
+#endif
 
 /* List of available CAs */
 typedef struct ca_list_st {
@@ -121,7 +135,7 @@ typedef struct ca_list_st {
 	PKI_X509_CERT *ca_cert;
 
 	/* Cert Identifier */
-	CA_ENTRY_CERTID *cid;
+	STACK_OF(CA_ENTRY_CERTID) *sk_cid;
 
 	/* CA certificate URL */
 	URL *ca_url;
@@ -206,6 +220,7 @@ typedef struct ocspd_config {
 	char *chroot_dir;
 
 	/* Digest to be used */
+	STACK_OF(EVP_MD) *issuerHashDigest;
 	PKI_DIGEST_ALG *digest;
 	PKI_DIGEST_ALG *sigDigest;
 
