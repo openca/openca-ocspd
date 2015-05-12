@@ -23,6 +23,8 @@
       <pki:crlReloadExpired>yes</pki:crlReloadExpired>
       <!-- Check CRLs validity every x seconds -->
       <pki:crlCheckValidity>600</pki:crlCheckValidity>
+      <!-- Skip CRL reload if it was not modified after the last load -->
+      <pki:crlCheckModificationTime>no</pki:crlCheckModificationTime>
    </pki:general>
    <!-- Security Related Configurations -->
    <pki:security>

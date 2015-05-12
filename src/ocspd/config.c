@@ -14,6 +14,7 @@
  */
 
 #include "general.h"
+#include <sys/stat.h>
 
 /* External imported variables */
 extern OCSPD_CONFIG * ocspd_conf;
@@ -209,6 +210,20 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 			PKI_log(PKI_LOG_INFO, "Expired CRLs Reload Disabled");
 		}
 
+		PKI_Free(tmp_s);
+	}
+
+	/* CheckModificationTime */
+	if((tmp_s = PKI_CONFIG_get_value( cnf,
+				"/serverConfig/general/crlCheckModificationTime")) != NULL ) {
+
+		if (strncmp_nocase(tmp_s, "y", 1) == 0)
+		{
+			h->crl_check_mtime = 1;
+			PKI_log(PKI_LOG_INFO, "CRL check of modification time enabled");
+		}
+		else
+			PKI_log(PKI_LOG_INFO, "CRL check of modification time disabled");
 		PKI_Free(tmp_s);
 	}
 
@@ -723,6 +738,17 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 						NULL, NULL )) == NULL ) {
 		PKI_log_err ("Failed loading CRL for %s", ca->ca_id );
 		return PKI_ERR;
+	}
+
+	if(conf->crl_check_mtime) {
+		struct stat st;
+
+		if(stat(ca->crl_url->addr, &st) == -1) {
+			PKI_log_err ("Cannot access CRL %s (%s)",
+				ca->crl_url->addr, strerror(errno) );
+		}
+		else
+			ca->mtime = st.st_mtime;
 	}
 
 	/* Let's check the CRL against the CA certificate */

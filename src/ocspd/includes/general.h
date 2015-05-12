@@ -166,6 +166,7 @@ typedef struct ca_list_st {
 	char *token_name;
 	char *token_config_dir;
 	PKI_TOKEN *token;
+	time_t mtime;
 	
 	/* Responder Identifier Type */
 	int response_id_type;
@@ -236,6 +237,7 @@ typedef struct ocspd_config {
 	int crl_check_validity;
 	int crl_auto_reload;
 	int crl_reload_expired;
+	int crl_check_mtime;
 
 	int current_crl_reload;
 	int current_crl_check;
