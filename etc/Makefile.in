@@ -477,7 +477,7 @@ install-data-local:
 	$(mkinstalldirs) $(etc_prefix)/ocspd/certs; \
 	$(mkinstalldirs) $(etc_prefix)/ocspd/crls; \
 	$(mkinstalldirs) $(etc_prefix)/ocspd/private; \
-	$(mkinstalldirs) $(etc_prefix)/ocspd/ca.d \
+	$(mkinstalldirs) $(etc_prefix)/ocspd/ca.d; \
 	$(mkinstalldirs) $(etc_prefix)/ocspd/pki; \
 	$(mkinstalldirs) $(etc_prefix)/ocspd/pki/token.d; \
 	$(mkinstalldirs) $(etc_prefix)/ocspd/pki/hsm.d; \
