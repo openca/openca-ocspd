@@ -9,6 +9,12 @@
 #ifndef HEADER_OPENCA_OCSPD_GENERAL_H
 #define HEADER_OPENCA_OCSPD_GENERAL_H
 
+#if defined(__clang__) || defined (__GNUC__)
+# define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+#else
+# define ATTRIBUTE_NO_SANITIZE_ADDRESS
+#endif
+
 #include <libpki/pki.h>
 
 #include <strings.h>
