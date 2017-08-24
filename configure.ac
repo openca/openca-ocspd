@@ -230,6 +230,8 @@ dnl check for stack protection of gcc
 if [[ "$CC" = "gcc" ]] ; then
 	AC_CHECK_C_OPTION(-fstack-check)
 	AC_CHECK_C_OPTION(-maccumulate-outgoing-args)
+	AC_CHECK_C_OPTION(-Werror)
+	AC_CHECK_C_OPTION(-Wfatal-errors)
 	if [[ "x${extra_checks}" = "xyes" ]] ; then
 		AC_CHECK_C_OPTION(-Wall)
 		AC_CHECK_C_OPTION(-Wmissing-field-initializers)
@@ -237,9 +239,7 @@ if [[ "$CC" = "gcc" ]] ; then
 		AC_CHECK_C_OPTION(-Wtype-limits)
 		AC_CHECK_C_OPTION(-Wuninitialized)
 		AC_CHECK_C_OPTION(-Wconversion)
-		AC_CHECK_C_OPTION(-Werror)
-		AC_CHECK_C_OPTION(-Wfatal-errors)
-		AC_CHECK_C_OPTION(-Wall)
+		AC_CHECK_C_OPTION(-fsanitize=address)
 	fi
 
        if [[ "$DIST_NAME" = "darwin" ]] ; then
