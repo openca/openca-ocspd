@@ -36,7 +36,7 @@ and the OCSPD packages at:
    http://wiki.openca.org/wiki/index.php/LibPKI
    http://wiki.openca.org/wiki/index.php/OCSP_Daemon
 
-NOTE: v2.5.1+ requires LibPKI v0.8.2+
+NOTE: v3.1.2+ requires LibPKI v0.8.9+
 
 3. Provided files
 =================

@@ -2,10 +2,10 @@ dnl -*- mode: m4; -*-
 dnl Process this file with autoconf to produce a configure script.
 AC_REVISION($Revision: 1.4 $)
 
-AC_COPYRIGHT([Copyright 2007-2014 by Massimiliano Pala and OpenCA Labs])
+AC_COPYRIGHT([Copyright 2007-2015 by Massimiliano Pala and OpenCA Labs])
 
 dnl Autoconf
-AC_INIT(openca-ocspd, 3.1.1, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
+AC_INIT(openca-ocspd, 3.1.2, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
 
 dnl Some variables
 VERSION=$PACKAGE_VERSION
@@ -291,7 +291,7 @@ pkildlibs="`${libpki_config} --libs`"
 pkiversion=`${libpki_config} --version`
 pkiversion_num=`echo $pkiversion | sed "s|\.||g"`
 
-pkirequired="0.8.8"
+pkirequired="0.8.9"
 pkirequired_num=`echo $pkirequired | sed "s|\.||g"`
 
 if [[ $pkiversion_num -lt $pkirequired_num ]] ; then

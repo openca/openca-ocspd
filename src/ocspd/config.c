@@ -300,17 +300,6 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 		PKI_Free(tmp_s);
 	}
 
-	/* Digest Algorithm to be used */
-	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/response/addResponseKeyID")) != NULL)
-	{
-		if (strncmp_nocase(tmp_s, "n", 1) == 0) 
-		{
-			h->add_response_keyid = 1;
-		}
-
-		PKI_Free(tmp_s);
-	}
-
 	/* Now Parse the PRQP Response Section */
 	if ((tmp_s = PKI_CONFIG_get_value( cnf, "/serverConfig/response/validity/days" )) != NULL)
 	{
@@ -578,21 +567,53 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			ca->token_name = tmp_s;
 			ca->token = PKI_TOKEN_new_null();
 
-			if ((tmp_s = PKI_CONFIG_get_value ( cnf, "/caConfig/pkiConfigDir" )) != NULL)
+			if ((tmp_s = PKI_CONFIG_get_value ( cnf, "/caConfig/pkiConfigDir" )) != NULL) {
 				ca->token_config_dir = strdup( tmp_s );
+				PKI_Free(tmp_s);
+			}
 			else
+			{
 				ca->token_config_dir = strdup(handler->token_config_dir);
+			}
 		}
 
-		if((tmp_s = PKI_CONFIG_get_value ( cnf, "/caConfig/caCompromised" )) == NULL)
+		if((tmp_s = PKI_CONFIG_get_value ( cnf, "/caConfig/caCompromised" )) == NULL) {
 			ca->compromised = 0;
+		}
 		else
+		{
 			ca->compromised = atoi(tmp_s);
+			PKI_Free(tmp_s);
+		}
+
+		/* Responder Id Type */
+		if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/responderIdType")) != NULL)
+		{
+			if (strncmp_nocase(tmp_s, "keyid", 5) == 0) 
+			{
+				ca->response_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_KEYID;
+			}
+			else if (strncmp_nocase(tmp_s, "name", 4) == 0)
+			{
+				ca->response_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_NAME;
+			}
+			else
+			{
+				PKI_log_err("Can not parse responderIdType: %s (allowed 'keyid' or 'name')", tmp_s);
+				exit(1);
+			}
+
+			PKI_Free(tmp_s);
+		}
+		else
+		{
+			// Default Value
+			ca->response_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_NAME;
+		}
 
 		// Now let's add the CA_LIST_ENTRY to the list of configured CAs
 		PKI_STACK_push ( ca_list, ca );
 
-		PKI_Free(tmp_s);
 	}
 
 	handler->ca_list = ca_list;
