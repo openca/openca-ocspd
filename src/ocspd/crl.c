@@ -25,7 +25,29 @@ extern OCSPD_CONFIG * ocspd_conf;
 
 int ocspd_load_ca_crl ( CA_LIST_ENTRY *a, OCSPD_CONFIG *conf ) {
 
+	struct stat st;
+
 	if(!a) return(-1);
+
+	memset(&st, 0, sizeof(st));
+
+	if(conf->crl_check_mtime) {
+		if(stat(a->crl_url->addr, &st) == -1) {
+			PKI_log_err ("Cannot access CRL for CA [ %s ] [%d::%s]. Skipping mtime check.",
+				a->ca_id, errno, strerror(errno));
+		}
+		else if(st.st_mtime <= a->mtime) {
+			if( conf->verbose ) {
+				PKI_log( PKI_LOG_INFO, "INFO::CRL for CA [ %s ] was not updated. Skipping reload.",
+			a->ca_id);
+			}
+
+			/* Check the validity of the previously loaded CRL to update it's status */
+			a->crl_status = check_crl_validity( a, conf );
+
+			return(0);
+		}
+	}
 
 	if( conf->debug )
 		PKI_log_debug( "ACQUIRING WRITE LOCK -- BEGIN CRL RELOAD");
@@ -88,6 +110,11 @@ int ocspd_load_ca_crl ( CA_LIST_ENTRY *a, OCSPD_CONFIG *conf ) {
 
 	if( a->crl_status == CRL_OK ) {
 		PKI_log(PKI_LOG_ALWAYS, "%s's CRL reloaded (OK)", a->ca_id);
+	}
+
+	if(conf->crl_check_mtime) {
+		/* Update mtime */
+		a->mtime = st.st_mtime;
 	}
 
 	return(0);

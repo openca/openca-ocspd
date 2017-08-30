@@ -23,6 +23,8 @@
       <pki:crlReloadExpired>yes</pki:crlReloadExpired>
       <!-- Check CRLs validity every x seconds -->
       <pki:crlCheckValidity>600</pki:crlCheckValidity>
+      <!-- Skip CRL reload if it was not modified after the last load -->
+      <pki:crlCheckModificationTime>no</pki:crlCheckModificationTime>
    </pki:general>
    <!-- Security Related Configurations -->
    <pki:security>
@@ -53,6 +55,13 @@
    <pki:response>
       <!-- Max size of incoming requests -->
       <pki:maxReqSize>8192</pki:maxReqSize>
+      <!-- Digest Algorithm used for building the issuerNameHash and
+           issuerKeyHash digest. More than one value can be used:
+           e.g. >SHA1,SHA224,SHA256,SHA384,SHA512<
+           The algorithms must be given in capital letters. Every algorithm
+           supported by OpenSSL can be used.
+           If not configured the digestAlgorithm (see below) ist used. -->
+      <pki:issuerHashDigestAlgorithm>SHA1,SHA256</pki:issuerHashDigestAlgorithm>
       <!-- Digest Algorithm to be used when building responses, currently
            the standard specifies SHA1 as the only supported algorithm -->
       <pki:digestAlgorithm>SHA1</pki:digestAlgorithm>

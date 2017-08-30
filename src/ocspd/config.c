@@ -14,11 +14,28 @@
  */
 
 #include "general.h"
+#include <sys/stat.h>
 
 /* External imported variables */
 extern OCSPD_CONFIG * ocspd_conf;
 
 /* Functions */
+static int OCSPD_EVP_MD_STACK_add_md(STACK_OF(EVP_MD) **mds, const EVP_MD *md)
+{
+	if (!mds)
+		return 0;
+
+	/* Create new md stack if necessary. */
+	if (!*mds && !(*mds = sk_EVP_MD_new_null()))
+		return 0;
+
+	/* Add the shared md, no copy needed. */
+	if (!sk_EVP_MD_push(*mds, (EVP_MD *)md))
+		return 0;
+
+	return 1;
+}
+
 OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 {
 	OCSPD_CONFIG *h = NULL;
@@ -196,6 +213,20 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 		PKI_Free(tmp_s);
 	}
 
+	/* CheckModificationTime */
+	if((tmp_s = PKI_CONFIG_get_value( cnf,
+				"/serverConfig/general/crlCheckModificationTime")) != NULL ) {
+
+		if (strncmp_nocase(tmp_s, "y", 1) == 0)
+		{
+			h->crl_check_mtime = 1;
+			PKI_log(PKI_LOG_INFO, "CRL check of modification time enabled");
+		}
+		else
+			PKI_log(PKI_LOG_INFO, "CRL check of modification time disabled");
+		PKI_Free(tmp_s);
+	}
+
 	/* Server Privileges */
 	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/security/user")) != NULL)
 	{
@@ -298,6 +329,68 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 		else PKI_log_debug("Selected signature digest algorithm: %s", tmp_s);
 
 		PKI_Free(tmp_s);
+	}
+
+	/* Digest algorithm used for building the issuerNameHash and issuerKeyHash */
+	if((tmp_s = PKI_CONFIG_get_value( cnf,
+			"/serverConfig/response/issuerHashDigestAlgorithm" )) != NULL )
+	{
+		EVP_MD *digest;
+		char *p1, *p2;
+
+		p1 = tmp_s;
+
+		while( (p2 = strchr(p1, ',') ) != NULL)
+		{
+			*p2++ = 0;
+
+			digest = PKI_DIGEST_ALG_get_by_name( p1 );
+			if (!digest)
+			{
+				PKI_log_err("Can not parse issuerHashDigestAlgorithm: %s", p1);
+				goto err;
+			}
+
+			if(!OCSPD_EVP_MD_STACK_add_md(&(h->issuerHashDigest), digest))
+			{
+				PKI_log_err("Can not add issuerHashDigestAlgorithm");
+				goto err;
+			}
+
+			PKI_log_debug("Selected issuerHashDigestAlgorithm: %s", p1);
+
+			/* Skip possible spaces */
+			while(*p2 == ' ')
+				p2++;
+			p1 = p2;
+		}
+
+		digest = PKI_DIGEST_ALG_get_by_name( p1 );
+		if (!digest)
+		{
+			PKI_log_err("Can not parse issuerHashDigestAlgorithm: %s", p1);
+			goto err;
+		}
+
+		if(!OCSPD_EVP_MD_STACK_add_md(&(h->issuerHashDigest), digest))
+		{
+			PKI_log_err("Can not add issuerHashDigestAlgorithm: %s", p1);
+			goto err;
+		}
+
+		PKI_log_debug("Selected issuerHashDigestAlgorithm: %s", p1);
+		PKI_Free(tmp_s);
+	}
+	else
+	{
+		/* for backward compatibility we use the configured digestAlgorithm */
+		if(!OCSPD_EVP_MD_STACK_add_md(&(h->issuerHashDigest), h->digest))
+		{
+			PKI_log_err("Can not add issuerHashDigestAlgorithm: %s", EVP_MD_name(PKI_DIGEST_ALG_DEFAULT));
+			goto err;
+		}
+
+		PKI_log_debug("Selected issuerHashDigestAlgorithm: %s", EVP_MD_name(PKI_DIGEST_ALG_DEFAULT));
 	}
 
 	/* Now Parse the PRQP Response Section */
@@ -468,7 +561,13 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 		tmp_url = NULL;
 
 		ca->ca_id = PKI_CONFIG_get_value( cnf, "/caConfig/name" );
-		ca->cid = CA_ENTRY_CERTID_new ( ca->ca_cert, handler->digest );
+
+		ca->sk_cid = CA_ENTRY_CERTID_new_sk ( ca->ca_cert, handler->issuerHashDigest );
+		if(ca->sk_cid == NULL) {
+			PKI_log_err ( "Cannot build CA CertIDs");
+			continue;
+		}
+
 
 		/* Get the CRL URL and the CRL itself */
 		if((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/crlUrl")) == NULL)
@@ -641,6 +740,17 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 		return PKI_ERR;
 	}
 
+	if(conf->crl_check_mtime) {
+		struct stat st;
+
+		if(stat(ca->crl_url->addr, &st) == -1) {
+			PKI_log_err ("Cannot access CRL %s (%s)",
+				ca->crl_url->addr, strerror(errno) );
+		}
+		else
+			ca->mtime = st.st_mtime;
+	}
+
 	/* Let's check the CRL against the CA certificate */
 	if( (ret = check_crl( ca->crl, ca->ca_cert, conf )) < 1 ) {
 		PKI_log_err( "CRL/CA check error [ %s:%d ]",
@@ -725,12 +835,11 @@ int ocspd_reload_all_ca ( OCSPD_CONFIG *conf ) {
 					ca->ca_id );
 		}
 
-		if((ca->cid = CA_ENTRY_CERTID_new ( ca->ca_cert,
-						conf->digest)) == NULL ) {
+		ca->sk_cid = CA_ENTRY_CERTID_new_sk ( ca->ca_cert, conf->issuerHashDigest );
+		if(ca->sk_cid == NULL ) {
 			PKI_log_err( "CA List structure init error (CERTID).");
 			continue;
 		}
-
 	}
 
 	return 1;
@@ -797,7 +906,16 @@ void CA_LIST_ENTRY_free ( CA_LIST_ENTRY *ca ) {
 	}
 
 	if ( ca->ca_cert ) PKI_X509_CERT_free ( ca->ca_cert );
-	if ( ca->cid ) CA_ENTRY_CERTID_free ( ca->cid );
+	if ( ca->sk_cid )
+	{
+		CA_ENTRY_CERTID *cid;
+
+		while ((cid = sk_CA_ENTRY_CERTID_pop ( ca->sk_cid )) != NULL)
+		{
+			CA_ENTRY_CERTID_free ( cid );
+		}
+		sk_CA_ENTRY_CERTID_free ( ca->sk_cid );
+	}
 	if ( ca->ca_url ) URL_free ( ca->ca_url );
 	if ( ca->crl_url ) URL_free ( ca->crl_url );
 
@@ -832,11 +950,11 @@ CA_LIST_ENTRY * OCSPD_ca_entry_new ( OCSPD_CONFIG *handler,
 	if (( ret = PKI_Malloc ( sizeof( CA_LIST_ENTRY ) )) == NULL ) return NULL;
 
 	/* Let's get the CA_ENTRY_CERTID */
-	if ((ret->cid = CA_ENTRY_CERTID_new ( x, handler->digest )) == NULL)
-	{
+	ret->sk_cid = CA_ENTRY_CERTID_new_sk ( x, handler->issuerHashDigest );
+	if(ret->sk_cid == NULL ) {
 		CA_LIST_ENTRY_free ( ret );
-		return NULL;
-	}
+		return ( NULL );
+ 	}
 
 	return ret;
 
@@ -844,27 +962,36 @@ CA_LIST_ENTRY * OCSPD_ca_entry_new ( OCSPD_CONFIG *handler,
 
 /* ---------------------------- CA_ENTRY_CERTID ------------------------- */
 
-CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *cert, 
-					PKI_DIGEST_ALG * digestAlg ) {
+STACK_OF(CA_ENTRY_CERTID) * CA_ENTRY_CERTID_new_sk ( PKI_X509_CERT *cert,
+					STACK_OF(EVP_MD) *mds ) {
 
-	CA_ENTRY_CERTID *ret = NULL;
+	int i;
+	STACK_OF(CA_ENTRY_CERTID) *sk_cid = NULL;
+	CA_ENTRY_CERTID *cid = NULL;
 
 	PKI_STRING *keyString = NULL;
 	PKI_DIGEST *keyDigest = NULL;
 
 	PKI_X509_NAME *iName = NULL;
 	PKI_DIGEST *nameDigest = NULL;
+	STACK_OF(EVP_MD) *sk_md = NULL;
+
+
+	PKI_log_debug("Building CA_ENTRY_CERTID stack");
 
 	/* Check for needed info */
 	if ( !cert || !cert->value ) return NULL;
 
-	/* Use SHA1 as default digest algorithm */
-	if ( !digestAlg ) digestAlg = PKI_DIGEST_ALG_SHA1;
+	/* fallback */
+	if ( !mds )
+	{
+		if(!OCSPD_EVP_MD_STACK_add_md(&(sk_md), PKI_DIGEST_ALG_SHA1))
+		{
+			PKI_log_err("Can not add digest algorithm");
+			return (NULL);
+		}
 
-	// Allocate Memory for the CA_ENTRY_CERTID
-	if((ret = PKI_Malloc(sizeof(CA_ENTRY_CERTID))) == NULL) {
-		PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
-		goto err;
+		mds = sk_md; // use input parameter as temporary variable
 	}
 
 	/* Retrieves the subject name from the certificate */
@@ -874,57 +1001,94 @@ CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *cert,
 		goto err;
 	};
 
-	// Let's build the HASH of the Name
-	if((nameDigest = PKI_X509_NAME_get_digest(iName, digestAlg)) == NULL) {
-		PKI_log_err("Can not get digest string from certificate's subject");
-		goto err;
-	};
-
-	// Assign the new OCTET string tothe nameHash field
-	if (( ret->nameHash = PKI_STRING_new ( PKI_STRING_OCTET,
-			(char *) nameDigest->digest, (ssize_t) nameDigest->size )) == NULL ) {
-		PKI_log_err("Can not assign nameHash to CERTID");
-		goto err;
-	};
-	
 	// Let's get the key bitstring from the certificate
 	if (( keyString = PKI_X509_CERT_get_data( cert, 
 				PKI_X509_DATA_PUBKEY_BITSTRING)) == NULL ) {
 		PKI_log_err("Can not get certificate's pubkey bitstring");
 		goto err;
+	}
 
-	} else {
+	// generate a digest for each given hash algorithm
+	for (i = 0; i < sk_EVP_MD_num(mds); ++i) {
+
+		EVP_MD *md = NULL;
+
+		// Allocate Memory for the CA_ENTRY_CERTID stack
+		if (!sk_cid && (sk_cid = sk_CA_ENTRY_CERTID_new_null()) == NULL) {
+			PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
+			goto err;
+		}
+
+		md = sk_EVP_MD_value(mds, i);
+		if(!md)
+			continue;
+
+		PKI_log_debug("Selected issuerHashDigestAlgorithm: %s", EVP_MD_name(md));
+
+		// Allocate Memory for each CA_ENTRY_CERTID
+		if((cid = PKI_Malloc(sizeof(CA_ENTRY_CERTID))) == NULL) {
+			PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
+			goto err;
+		}
+
+		// Let's build the HASH of the Name
+		if((nameDigest = PKI_X509_NAME_get_digest(iName, md)) == NULL) {
+			PKI_log_err("Can not get digest string from certificate's subject");
+			goto err;
+		}
+
+		// Assign the new OCTET string to the nameHash field
+		if (( cid->nameHash = PKI_STRING_new ( PKI_STRING_OCTET,
+				(char *)nameDigest->digest, (ssize_t) nameDigest->size )) == NULL ) {
+			PKI_log_err("Can not assign nameHash to CERTID");
+			goto err;
+		};
+
 		// We build the keyDigest from the keyString
-		if((keyDigest = PKI_STRING_get_digest (keyString, 
-				digestAlg)) == NULL ) {
+		if((keyDigest = PKI_STRING_get_digest (keyString, md)) == NULL ) {
 			PKI_log_err("Can not create new keyDigest from keyString");
 			goto err;
 		};
-	};
 
-	if((ret->keyHash = PKI_STRING_new ( PKI_STRING_OCTET,
-				(char *) keyDigest->digest, (ssize_t) keyDigest->size )) == NULL ) {
-		PKI_log_err("Can not assign keyHash to CERTID");
-		goto err;
-	};
+		if((cid->keyHash = PKI_STRING_new ( PKI_STRING_OCTET,
+						(char *)keyDigest->digest, (ssize_t) keyDigest->size )) == NULL ) {
+			PKI_log_err("Can not assign keyHash to CERTID");
+			goto err;
+		}
 
-	/* Set the Digest Algorithm used */
-	if((ret->hashAlgorithm = PKI_ALGORITHM_new_digest( digestAlg )) == NULL ) {
-		if( ret ) CA_ENTRY_CERTID_free ( ret );
-		PKI_log_err("ERROR, can not create a new hashAlgorithm!");
-		return NULL;
-	};
+		/* Set the Digest Algorithm used */
+		if((cid->hashAlgorithm = PKI_ALGORITHM_new_digest( md )) == NULL ) {
+			PKI_log_err("ERROR, can not create a new hashAlgorithm!");
+			goto err;
+		}
 
-	if ( nameDigest ) PKI_DIGEST_free ( nameDigest );
-	if ( keyDigest  ) PKI_DIGEST_free ( keyDigest );
+		// add entry to our stack
+		if(!sk_CA_ENTRY_CERTID_push(sk_cid, cid)) {
+			PKI_log_err("ERROR, can not create a new hashAlgorithm!");
+			goto err;
+		}
+		cid = NULL;
 
-	return ret;
+		if ( nameDigest ) {
+			PKI_DIGEST_free ( nameDigest );
+			nameDigest = NULL;
+		}
+		if ( keyDigest  ) {
+			PKI_DIGEST_free ( keyDigest );
+			keyDigest = NULL;
+		}
+	}
+
+	if ( sk_md ) sk_EVP_MD_free(sk_md);
+
+	return sk_cid;
 
 err:
 	if ( nameDigest ) PKI_DIGEST_free ( nameDigest );
 	if ( keyDigest  ) PKI_DIGEST_free ( keyDigest );
-
-	if ( ret ) CA_ENTRY_CERTID_free ( ret );
+	if ( sk_cid )     sk_CA_ENTRY_CERTID_free(sk_cid);
+	if ( cid )        CA_ENTRY_CERTID_free ( cid );
+	if ( sk_md )      sk_EVP_MD_free(sk_md);
 
 	return ( NULL );
 }
@@ -940,6 +1104,10 @@ void CA_ENTRY_CERTID_free ( CA_ENTRY_CERTID *cid ) {
 
 	if ( cid->nameHash ) {
 		PKI_STRING_free ( cid->nameHash );
+	}
+
+	if ( cid->hashAlgorithm ) {
+		X509_ALGOR_free(cid->hashAlgorithm);
 	}
 
 	PKI_Free ( cid );

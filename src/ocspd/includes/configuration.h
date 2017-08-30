@@ -20,6 +20,10 @@
 
 #include "general.h"
 
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+#include <openssl/ts.h>
+#endif
+
 OCSPD_CONFIG * OCSPD_load_config( char *configfile );
 
 int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
@@ -41,8 +45,8 @@ void CA_LIST_ENTRY_free ( CA_LIST_ENTRY *ca );
 CA_LIST_ENTRY * OCSPD_ca_entry_new ( OCSPD_CONFIG *handler,
 				PKI_X509_CERT *x, PKI_CONFIG *cnf );
 
-CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *x, 
-				PKI_DIGEST_ALG * digest );
+STACK_OF(CA_ENTRY_CERTID) * CA_ENTRY_CERTID_new_sk ( PKI_X509_CERT *cert,
+				STACK_OF(EVP_MD) *mds );
 
 void CA_ENTRY_CERTID_free ( CA_ENTRY_CERTID *cid );
 
