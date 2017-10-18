@@ -396,15 +396,27 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 		/* Get the CA cert from the cfg file itself */
 		if((tmp_s = PKI_CONFIG_get_value( cnf, "/caConfig/caCertValue" )) == NULL )
 		{
+			// Gets the CaCertUrl
+			if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/caCertUrl")) == NULL) {
+				PKI_log_err("Can not find caCertValue or caCertUrl entry");
+				continue;
+			}
+
 			/* Get the CA parsed url */
-			if((tmp_url = URL_new( PKI_CONFIG_get_value( cnf, "/caConfig/caCertUrl" ))) == NULL )
+			if((tmp_url = URL_new(tmp_s)) == NULL )
 			{
 				/* Error, can not parse url data */
-				PKI_log( PKI_LOG_ERR, "Can not parse CA cert url (%s)", 
-					PKI_CONFIG_get_value(cnf, "/caConfig/caCertUrl"));
+				PKI_log(PKI_LOG_ERR, "Can not parse CA cert url (%s)", tmp_s);
+
+				// Free Memory
+				PKI_Free(tmp_s);
 
 				continue;
 			}
+
+			// Free Memory
+			PKI_Free(tmp_s);
+			tmp_s = NULL; // Safety
 
 			if((tmp_cert = PKI_X509_CERT_get_url(tmp_url, NULL, NULL ))== NULL)
 			{
@@ -413,6 +425,10 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 
 				continue;
 			}
+
+			// Free Memory
+			if (tmp_url) URL_free(tmp_url);
+			tmp_url = NULL; // Safety
 		}
 		else
 		{
