@@ -17,6 +17,9 @@ run="${prefix}/var/run";
 ocspd="${sbin}/ocspd";
 conf="${etc}/ocspd.xml";
 
+memdebug="valgrind"
+memopts="--leak-check=full --show-reachable=yes --show-leak-kinds=definite --trace-children=yes --track-origins=yes --suppressions=${prefix}/etc/ocspd/openssl.sup -v"
+
 # Check the 
 pidfile="${run}/ocspd.pid";
 pid=`cat $pidfile 2>/dev/null`;
@@ -37,17 +40,25 @@ case "$1" in
 			echo "Error, check logs!" );
 		;;
   start-verbose)
-		echo -n "Starting OCSP Responder: "
+		echo -n "Starting OCSP Responder (Verbose Mode): "
 		kill -s 0 "$pid" 2>/dev/null && 
 			echo "ERROR, responder is already running" ||
 			( ${ocspd} -c "${conf}" -d -v && echo "Done." ||
 				echo "Error, check logs!" );
 		;;
   start-debug)
-		echo -n "Starting OCSP Responder: "
+		echo -n "Starting OCSP Responder (Debug Mode): "
 		kill -s 0 "$pid" 2>/dev/null && 
 			echo "ERROR, responder is already running" ||
 			( ${ocspd} -c "${conf}" -d -v -debug && echo "Done." ||
+				echo "Error, check logs!" );
+		echo "Done."
+		;;
+  start-memory)
+		echo -n "Starting OCSP Responder (Memory Tracking): "
+		kill -s 0 "$pid" 2>/dev/null && 
+			echo "ERROR, responder is already running" ||
+			( ${memdebug} ${memopts} ${ocspd} -c "${conf}" -v -debug -stdout && echo "Done." ||
 				echo "Error, check logs!" );
 		echo "Done."
 		;;
