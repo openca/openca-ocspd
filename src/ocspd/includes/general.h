@@ -162,6 +162,9 @@ typedef struct ca_list_st {
 	/* Responder Identifier Type */
 	int response_id_type;
 
+	/* CREDS for TLS connections */
+	PKI_CRED * creds;
+
 } CA_LIST_ENTRY;
 
 typedef struct {

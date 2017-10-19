@@ -126,7 +126,7 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
  	// verify capabilities!
 	if (conf->testmode)
 	{
-		PKI_STRING *signature = NULL;
+		const PKI_STRING *signature = NULL;
 
 		PKI_log(PKI_LOG_ALWAYS,
 			"WARNING: TestMode (Wrong Signatures): Flipping first bit in Signature");
@@ -144,10 +144,10 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 			// Flip The First n-Bit of the Signature (n=1)
 			for (i=0; i < 1; i++ )
 			{
-				if(ASN1_BIT_STRING_get_bit(signature, i))
-    				ASN1_BIT_STRING_set_bit(signature, i, 0);
+				if (ASN1_BIT_STRING_get_bit((PKI_STRING *)signature, i))
+    				ASN1_BIT_STRING_set_bit((PKI_STRING *)signature, i, 0);
     			else
-    				ASN1_BIT_STRING_set_bit(signature, i, 1);
+    				ASN1_BIT_STRING_set_bit((PKI_STRING *)signature, i, 1);
 			}
 
 			r = resp->value;

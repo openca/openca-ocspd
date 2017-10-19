@@ -534,7 +534,58 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			PKI_Free(tmp_s);
 		}
 
-		if(OCSPD_load_crl ( ca, handler ) == PKI_ERR )
+		// TODO: Provide options to set SSL configuration for
+		// outgoing connections
+		/*
+		if (ca->crl_url->ssl == 1) {
+
+			int idx = 0;
+				// Index
+
+			PKI_SSL * ssl = NULL;
+				// PKI_SSL structure for creds
+
+			PKI_X509_CERT_STACK *sk = NULL;
+				// Stack of Trused Certificates
+
+			// Allocates the PKI_CRED structure
+			if ((ca->creds = PKI_CRED_new()) == NULL) {
+				PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
+				return -1;
+			}
+
+			// Allocates the PKI_SSL structure
+			if ((ssl = PKI_SSL_new(NULL)) == NULL) {
+				PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
+
+				CA_LIST_ENTRY_free(ca);
+				continue;
+			}
+
+			if ((sk = PKI_X509_CERT_STACK_get(trusted_certs, NULL, NULL)) == 0) {
+				PKI_log_err("Can't load Trusted Certs from %s", trusted_certs);
+			}
+
+                        if (PKI_SSL_set_trusted(ssl, sk) != PKI_OK) {
+				PKI_log_err("Can't set the Trusted Certs for TLS connections.");
+			}
+
+			// Set the verify options for TLS
+			PKI_SSL_set_verify(ssl, PKI_SSL_VERIFY_NONE);
+
+			// Sets the Cipher
+			PKI_SSL_set_cipher(ssl, );
+
+			// Sets the SSL flags
+			PKI_SSL_set_flags(ssl, );
+
+			// Set the SSL object for the credentials
+			PKI_CRED_set_ssl(ca->creds, ssl);
+
+		}
+		*/
+
+		if (OCSPD_load_crl(ca, handler) == PKI_ERR )
 		{
 			PKI_log_err ( "Can not get CRL for %s", ca->ca_id);
 			CA_LIST_ENTRY_free ( ca );
@@ -666,9 +717,16 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 
 	/* Now we copy the lastUpdate and nextUpdate fields */
 	if( ca->crl ) {
+
+		if (ca->lastUpdate) PKI_TIME_free (ca->lastUpdate);
+		ca->lastUpdate = NULL;
+
 		ca->lastUpdate = PKI_TIME_dup(
 			PKI_X509_CRL_get_data (ca->crl, 
 				PKI_X509_DATA_LASTUPDATE));
+
+		if (ca->nextUpdate) PKI_TIME_free(ca->nextUpdate);
+		ca->nextUpdate = NULL;
 
 		ca->nextUpdate = PKI_TIME_dup (
 			PKI_X509_CRL_get_data (ca->crl,
@@ -686,9 +744,9 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 	/* Let's get the CRLs entries, if any */
 	if( ocspd_build_crl_entries_list ( ca, ca->crl ) == NULL ) { 
 		PKI_log(PKI_LOG_ALWAYS, "No CRL Entries for %s", ca->ca_id );
-	};
+	}
 
-	if(conf->verbose) PKI_log( PKI_LOG_ALWAYS, "CRL loaded for %s", ca->ca_id );
+	if (conf->verbose) PKI_log( PKI_LOG_ALWAYS, "CRL loaded for %s", ca->ca_id );
 
 	return PKI_OK;
 }
@@ -833,6 +891,8 @@ void CA_LIST_ENTRY_free ( CA_LIST_ENTRY *ca ) {
 	if ( ca->token_name ) PKI_Free ( ca->token_name );
 	if ( ca->token ) PKI_TOKEN_free ( ca->token );
 
+	if (ca->creds) PKI_CRED_free(ca->creds);
+
 	PKI_Free ( ca );
 
 	return;
@@ -865,10 +925,10 @@ CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *cert,
 
 	CA_ENTRY_CERTID *ret = NULL;
 
-	PKI_STRING *keyString = NULL;
+	const PKI_STRING *keyString = NULL;
 	PKI_DIGEST *keyDigest = NULL;
 
-	PKI_X509_NAME *iName = NULL;
+	const PKI_X509_NAME *iName = NULL;
 	PKI_DIGEST *nameDigest = NULL;
 
 	/* Check for needed info */
