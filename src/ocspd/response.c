@@ -657,10 +657,25 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 	// STACK_OF(CA_ENTRY_CERTID) *a = NULL;
 
 	int i = 0, ret = PKI_OK;
+	int j;
+	int elements;
 
 	OCSP_CERTID *b = NULL;
 	CA_LIST_ENTRY *ca = NULL;
-	CA_ENTRY_CERTID *tmp = NULL;
+	CA_ENTRY_CERTID *ca_cid = NULL;
+
+	int alg_id1 = 0;
+	int alg_id2 = 0;
+
+	char tmp_buf[128];
+	int tmp_len = sizeof(tmp_buf);
+
+
+	if (cid == NULL)
+	{
+		PKI_log_err("ERROR: missing CertID");
+		return NULL;
+	}
 
 	b = cid;
 
@@ -670,15 +685,63 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 		return NULL;
 	}
 
-	int elements = PKI_STACK_elements(conf->ca_list);
+	alg_id1 = OBJ_obj2nid(b->hashAlgorithm->algorithm);
+	if(alg_id1 == NID_undef)
+	{
+		PKI_log_err("ERROR: Cannot get hashAlgorithm from CA CertID");
+		return NULL;
+	}
+
+	elements = PKI_STACK_elements(conf->ca_list);
+
 	for ( i = 0; i < elements; i++ )
 	{
 		ca = (CA_LIST_ENTRY *) PKI_STACK_get_num(conf->ca_list, i);
 
-		tmp = ca->cid;
+		ca_cid = NULL;
+
+		/* check requested hash algorithm for CertID against our CA */
+		for(j = 0; j < sk_CA_ENTRY_CERTID_num(ca->sk_cid); j++)
+		{
+			CA_ENTRY_CERTID *tmp_cid;
+
+			tmp_cid = sk_CA_ENTRY_CERTID_value(ca->sk_cid, j);
+			if(!tmp_cid)
+				continue;
+
+			alg_id2 = OBJ_obj2nid(tmp_cid->hashAlgorithm->algorithm);
+			if(alg_id2 == NID_undef)
+			{
+				PKI_log_err("ERROR: Cannot get hashAlgorithm from CA CertID");
+				return NULL;
+			}
+
+			if (conf->debug)
+			{
+				if(OBJ_obj2txt(tmp_buf, tmp_len, tmp_cid->hashAlgorithm->algorithm, 0) > 0)
+					PKI_log_debug("OCSPD_CA_ENTRY_find: Check requested CertID algorithm from config: %s", tmp_buf);
+			}
+
+			if(alg_id1 != alg_id2)
+				continue;
+
+			ca_cid = tmp_cid;
+			break;
+		}
+
+		/* no supported hash algorithm found - the supported algorithms are
+		 * equal for every loaded CA - exiting */
+		if(!ca_cid)
+		{
+			if(OBJ_obj2txt(tmp_buf, tmp_len, b->hashAlgorithm->algorithm, 0) > 0)
+				PKI_log_err("ERROR: No supported hash algorithm for requested CertID found (requested algorithm is %s)", tmp_buf);
+			else
+				PKI_log_err("ERROR: No supported hash algorithm for requested CertID found");
+			return NULL;
+		}
 
 		/* Check for hashes */
-		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash, b->issuerNameHash)) != 0 )
+		if((ret = ASN1_OCTET_STRING_cmp(ca_cid->nameHash, b->issuerNameHash)) != 0 )
 		{
 			if (conf->debug) 
 			{
@@ -692,7 +755,7 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 			PKI_log_debug("CRL::CA [%s] nameHash OK", ca->ca_id);
 		}
 
-		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, b->issuerKeyHash)) != 0)
+		if ((ret = ASN1_OCTET_STRING_cmp(ca_cid->keyHash, b->issuerKeyHash)) != 0)
 		{
 			if (conf->debug)
 			{
