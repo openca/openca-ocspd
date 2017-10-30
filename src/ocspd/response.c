@@ -219,9 +219,6 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	int i, id_count;
 	int signResponse;
 
-	int use_server_cert = 0;
-	int use_server_cacert = 0;
-
 	PKI_TIME *thisupd = NULL;
 	PKI_TIME *nextupd = NULL;
 

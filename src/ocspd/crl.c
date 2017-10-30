@@ -25,12 +25,8 @@ extern OCSPD_CONFIG * ocspd_conf;
 
 int ocspd_load_ca_crl ( CA_LIST_ENTRY *a, OCSPD_CONFIG *conf ) {
 
-	PKI_CRED * creds = NULL;
-		// Credentials for outgoing connections
-	
 	// Input checks
 	if (!a || !conf) return(-1);
-
 
 	// Debugging information
 	if( conf->debug ) PKI_log_debug( "ACQUIRING WRITE LOCK -- BEGIN CRL RELOAD");
