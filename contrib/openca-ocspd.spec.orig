@@ -134,9 +134,9 @@ make DESTDIR="$RPM_BUILD_ROOT" prefix="%{prefix}" mandir="$RPM_BUILD_ROOT%{share
 %post
 
 [ -e "/etc/init.d/ocspd" ] || ln -s "%{prefix}/etc/init.d/ocspd" "/etc/init.d/ocspd"
+
 if [ -f "/usr/bin/systemctl" ] ; then
   /usr/bin/systemctl daemon-reload
-  /usr/bin/systemctl enable ocspd
 fi
 
 %postun
