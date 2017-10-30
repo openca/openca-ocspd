@@ -58,7 +58,7 @@
 %define rel     	%{?CUSTOM_RELEASE} %{!?CUSTOM_RELEASE:%RELEASE}
 %define prefix   	/usr
 %define mand		/usr/man
-%define libpki_req 	0.8.8
+%define libpki_req 	0.9.0
 
 %define working_release %rel.%{disttag}%{distver}
 
@@ -128,13 +128,24 @@ make DESTDIR="$RPM_BUILD_ROOT" prefix="%{prefix}" mandir="$RPM_BUILD_ROOT%{share
 %{prefix}/etc/init.d/*
 %{prefix}/etc/ocspd/*
 %{prefix}/var/*
-%{prefix}/lib
+# %{prefix}/lib
 # %{mand}/*
 
 %post
 
+[ -e "/etc/init.d/ocspd" ] || ln -s "%{prefix}/etc/init.d/ocspd" "/etc/init.d/ocspd"
+if [ -f "/usr/bin/systemctl" ] ; then
+  /usr/bin/systemctl daemon-reload
+  /usr/bin/systemctl enable ocspd
+fi
+
 %postun
 
+if [ -f "/usr/bin/systemctl" ] ; then
+  /usr/bin/systemctl disable ocspd
+fi
+
+[ -e "/etc/init.d/ocspd" ] || rm -f "/etc/init.d/ocspd"
 
 %changelog
 * Sat Aug 29 2009 Massimiliano Pala <madwolf@openca.org>

@@ -1,6 +1,6 @@
 # file: Makefile.am
 #
-# © 2001-2009 by Massimiliano Pala and OpenCA Labs
+# © 2001-2017 by Massimiliano Pala and OpenCA Labs
 
 VERSION			= @VERSION@
 PKG_VER			= @PKG_VER@
@@ -25,6 +25,8 @@ DEST_SBINDIR		= @sbindir@
 ## HAVE_SHARED_LIBS	= @HAVE_SHARED_LIBS@
 POD2MAN			= @POD2MAN@
 CHMOD			= @CHMOD@
+
+RPM_BUILD_BASE		= ${HOME}/rpmbuild
 
 #-------- user and group for installation: --------
 
@@ -156,16 +158,21 @@ rpm:
 	echo "Building source package... " ; \
 	$(MAKE) -f $(MAKEFILE) dist ; \
 	echo "Building RPM package(s)... " ; \
-	rm -rf /usr/src/redhat/BUILD/$(PACKAGE_NAME)* \
-		$(HOME)/rpmbuild/BUILD/$(PACKAGE_NAME)* ; \
-	sudo rpmbuild -ta $(PACKAGE_NAME)-$(VERSION).tar.gz ; \
-	sudo mv /usr/src/redhat/RPMS/*/$(PACKAGE_NAME)*.rpm . 2>/dev/null || \
-		sudo mv $(HOME)/tmp/rpm/RPMS/*/$(PACKAGE_NAME)*.rpm . 2>/dev/null || \
-		sudo mv $(HOME)/rpmbuild/RPMS/*/$(PACKAGE_NAME)*.rpm . 2>/dev/null ; \
-	sudo mv /usr/src/redhat/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null || \
-		sudo mv $(HOME)/tmp/rpm/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null || \
-		sudo mv $(HOME)/rpmbuild/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null ; \
+	rm -rf "$(RPM_BUILD_BASE)/BUILD/$(PACKAGE_NAME)*" ; \
+	[[ -d "$(RPM_BUILD_BASE)" ]] || mkdir -p "$(RPM_BUILD_BASE)" ; \
+	rpmbuild -ta $(PACKAGE_NAME)-$(VERSION).tar.gz ; \
+	mv $(RPM_BUILD_BASE)/RPMS/*/$(PACKAGE_NAME)*.rpm . 2>/dev/null ; \
+	mv $(RPM_BUILD_BASE)/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null ; \
 	echo
+
+#	sudo rpmbuild "--buildroot=${RPM_BUILD_BASE}" -ta $(PACKAGE_NAME)-$(VERSION).tar.gz ; \
+#	sudo mv /usr/src/redhat/RPMS/*/$(PACKAGE_NAME)*.rpm . 2>/dev/null || \
+#		sudo mv $(HOME)/tmp/rpm/RPMS/*/$(PACKAGE_NAME)*.rpm . 2>/dev/null || \
+#		sudo mv $(HOME)/rpmbuild/RPMS/*/$(PACKAGE_NAME)*.rpm . 2>/dev/null ; \
+#	sudo mv /usr/src/redhat/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null || \
+#		sudo mv $(HOME)/tmp/rpm/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null || \
+#		sudo mv $(HOME)/rpmbuild/SRPMS/$(PACKAGE_NAME)*.src.rpm . 2>/dev/null ; \
+#	echo
 
 pkgbuild:
 	@rm -rf /tmp/$(PACKAGE_NAME)-build-$(VERSION)
