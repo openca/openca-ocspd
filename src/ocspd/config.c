@@ -519,8 +519,6 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 		}
 		else
 		{
-			PKI_log_debug("Got CRL Url -> %s", tmp_s );
-
 			if((ca->crl_url = URL_new ( tmp_s )) == NULL )
 			{
 				PKI_log_err ("Error Parsing CRL URL [%s] for CA [%s]", ca->ca_id, tmp_s);
@@ -585,12 +583,17 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 		}
 		*/
 
+		// Failure loading the CRL was a fatal error, now
+		// we let the OCSP continue since the loading error
+		// might be temporary
 		if (OCSPD_load_crl(ca, handler) == PKI_ERR )
 		{
-			PKI_log_err ( "Can not get CRL for %s", ca->ca_id);
-			CA_LIST_ENTRY_free ( ca );
+			PKI_log_err ( "Can not get CRL for %s (%s)", 
+					ca->ca_id, ca->crl_url->addr);
 
-			continue;
+			// Switched to non-fatal error
+			// CA_LIST_ENTRY_free ( ca );
+			// continue;
 		}
 
 		/* If the Server has a Token to be used with this CA, let's

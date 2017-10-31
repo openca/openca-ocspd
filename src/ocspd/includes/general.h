@@ -117,6 +117,7 @@ typedef struct ca_entry_certid
 
 /* List of available CAs */
 typedef struct ca_list_st {
+
 	/* CA Identifier - Name from config file */
 	char *ca_id;
 
@@ -164,6 +165,12 @@ typedef struct ca_list_st {
 
 	/* CREDS for TLS connections */
 	PKI_CRED * creds;
+
+	/* Basic Template for the response */
+	PKI_OCSP_RESP * resp_template;
+
+	/* CA Cache */
+	OCSPD_CACHE * oc;
 
 } CA_LIST_ENTRY;
 
@@ -289,6 +296,7 @@ typedef struct ocspd_config {
 #include "response.h"
 #include "request.h"
 #include "crl.h"
+#include "cache.h"
 
 #define HTTP_POST		0
 #endif

@@ -77,15 +77,13 @@ int ocspd_load_ca_crl ( CA_LIST_ENTRY *a, OCSPD_CONFIG *conf ) {
 	if ( a->nextUpdate ) ASN1_TIME_free(a->nextUpdate);
 
 	/* Get new values from the recently loaded CRL */
-	a->lastUpdate = M_ASN1_TIME_dup (
+	a->lastUpdate = PKI_TIME_dup(
 		PKI_X509_CRL_get_data ( a->crl, PKI_X509_DATA_LASTUPDATE ));
-	a->nextUpdate = M_ASN1_TIME_dup (
+	a->nextUpdate = PKI_TIME_dup (
 		PKI_X509_CRL_get_data ( a->crl, PKI_X509_DATA_NEXTUPDATE ));
 
-	if(conf->debug) PKI_log_debug("RELEASING LOCK (CRL RELOAD)");
+	// Releases the lock
 	PKI_RWLOCK_release_write ( &conf->crl_lock );
-	// pthread_rwlock_unlock ( &crl_lock );
-	if(conf->debug) PKI_log_debug ( "LOCK RELEASED --END--");
 
 	/* Now check the CRL validity */
 	a->crl_status = check_crl_validity( a, conf );
@@ -366,4 +364,4 @@ void force_crl_reload ( int sig ) {
 	ocspd_reload_crls ( ocspd_conf );
 
 	return;
-};
+}

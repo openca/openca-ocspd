@@ -14,7 +14,8 @@ ocspd_SOURCES = \
 	request.c \
 	response.c \
 	config.c \
-	crl.c 
+	crl.c \
+	cache.c
 
 EXTRA_DIST = \
 	includes/*.h

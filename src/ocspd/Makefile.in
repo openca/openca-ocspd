@@ -108,7 +108,7 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_ocspd_OBJECTS = ocspd-ocspd.$(OBJEXT) ocspd-core.$(OBJEXT) \
 	ocspd-threads.$(OBJEXT) ocspd-request.$(OBJEXT) \
 	ocspd-response.$(OBJEXT) ocspd-config.$(OBJEXT) \
-	ocspd-crl.$(OBJEXT)
+	ocspd-crl.$(OBJEXT) ocspd-cache.$(OBJEXT)
 ocspd_OBJECTS = $(am_ocspd_OBJECTS)
 ocspd_DEPENDENCIES =
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -339,7 +339,8 @@ ocspd_SOURCES = \
 	request.c \
 	response.c \
 	config.c \
-	crl.c 
+	crl.c \
+	cache.c
 
 EXTRA_DIST = \
 	includes/*.h
@@ -439,6 +440,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ocspd-cache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ocspd-config.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ocspd-core.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ocspd-crl.Po@am__quote@
@@ -565,6 +567,20 @@ ocspd-crl.obj: crl.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crl.c' object='ocspd-crl.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ocspd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ocspd-crl.obj `if test -f 'crl.c'; then $(CYGPATH_W) 'crl.c'; else $(CYGPATH_W) '$(srcdir)/crl.c'; fi`
+
+ocspd-cache.o: cache.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ocspd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ocspd-cache.o -MD -MP -MF $(DEPDIR)/ocspd-cache.Tpo -c -o ocspd-cache.o `test -f 'cache.c' || echo '$(srcdir)/'`cache.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ocspd-cache.Tpo $(DEPDIR)/ocspd-cache.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cache.c' object='ocspd-cache.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ocspd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ocspd-cache.o `test -f 'cache.c' || echo '$(srcdir)/'`cache.c
+
+ocspd-cache.obj: cache.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ocspd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ocspd-cache.obj -MD -MP -MF $(DEPDIR)/ocspd-cache.Tpo -c -o ocspd-cache.obj `if test -f 'cache.c'; then $(CYGPATH_W) 'cache.c'; else $(CYGPATH_W) '$(srcdir)/cache.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ocspd-cache.Tpo $(DEPDIR)/ocspd-cache.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cache.c' object='ocspd-cache.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ocspd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ocspd-cache.obj `if test -f 'cache.c'; then $(CYGPATH_W) 'cache.c'; else $(CYGPATH_W) '$(srcdir)/cache.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
