@@ -104,8 +104,52 @@ In order to force CRL reloading for the configured CAs, use the following:
 
    $ PREFIX/etc/init.d/ocspd reload-crl
 
+5. Reverse Proxy Installation
+=============================
 
-5. Known Bugs
+It is possible to install the server behind a full-fledged HTTP server like
+apache. A typical configuration for that would be the OCSP server listening
+on the internal interface (e.g., 127.0.0.1 at port 2560) and the apache web
+server listening on the generic port 80 on the external interface and act
+as a reverse proxy to the OCSP server's interface.
+
+To do that, here's an example configuration of the Apache Web Server:
+
+  <VirtualHost _default_:80>
+
+    Servername ocsp.example.com
+    DocumentRoot /dev/null
+
+    CustomLog /var/log/httpd/testocsp.kyrio.com-access.log combined
+    ErrorLog /var/log/httpd/testocsp.kyrio.com-error.log
+
+    # Just use the ProxyPass option from Apache to redirect the requests
+    # to the OpenCA's OCSP server
+    ProxyPass / http://127.0.0.1:2560
+
+    # Using the RewriteEngine configuration instead of the
+    # ProxyPass is another possibility, here's an example
+    #
+    # RewriteEngine on
+    # RewriteCond %{CONTENT_TYPE} !^application/ocsp-request$
+    # RewriteRule ^/(.*) http://localhost:2560/ [P]
+
+  </VirtualHost>
+
+More information can be found at http://wiki.cacert.org/OcspResponder. However,  
+because of SELinux configuration, you might get an error from Apache when trying
+to connect to the localhost at port 2560. In order to fix that, you need to
+give Apache the possibility to open the connection. This is done by using the
+following command:
+
+  [root@ocsp]# setsebool -P httpd_can_network_connect 1
+
+more on this issue (SELinux) can be found here:
+
+  https://wiki.apache.org/httpd/13PermissionDenied
+
+
+6. Known Bugs
 =============
 
 Since we re-engineered the server, no extensive testing has been perfomed.
