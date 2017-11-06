@@ -2,6 +2,41 @@
 
 #include "general.h"
 
+// Allocates a new caching entry
+OCSPD_CACHE_ENTRY * OCSPD_CACHE_ENTRY_new(void) {
+
+	OCSPD_CACHE_ENTRY * e = NULL;
+
+	// Allocates the required memory
+	if ((e = PKI_Malloc(sizeof(OCSPD_CACHE_ENTRY))) == NULL) {
+		PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
+		return NULL;
+	}
+
+	// Makes sure we null pointers
+
+	// Initializes the MUTEX
+
+	return e;
+}
+
+// Frees all memory associated with a cache entry
+void OCSPD_CACHE_ENTRY_free(OCSPD_CACHE_ENTRY *e) {
+
+	if (!e) return;
+
+	// Free all internal pointers
+
+	// Remove itself from the queue and move
+	// the next element up the chain
+
+	// Free the associated memory
+	PKI_Free(e);
+
+	// All Done
+	return;
+}
+
 void OCSPD_CACHE_free(OCSPD_CACHE * oc) {
 
 	// Input check
