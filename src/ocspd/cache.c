@@ -81,11 +81,14 @@ OCSPD_CACHE * OCSPD_CACHE_new(size_t size) {
 }
 
 int OCSPD_CACHE_entry_idx(OCSPD_CACHE_ENTRY *entry) {
+	return -1;
 }
 
 int OCSPD_CACHE_set_entry(OCSPD_CACHE * cache, OCSPD_CACHE_ENTRY *entry) {
+	return -1;
 }
 
 OCSPD_CACHE_ENTRY * OCSPD_CACHE_get0_entry(OCSPD_CACHE * cache, ASN1_INTEGER *serialNumber) {
+	return NULL;
 }
 
