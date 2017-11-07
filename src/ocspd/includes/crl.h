@@ -22,7 +22,7 @@ int ocspd_load_ca_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf );
 int ocspd_reload_crls ( OCSPD_CONFIG *conf );
 int check_crl ( PKI_X509_CRL *crl, PKI_X509_CERT *ca, OCSPD_CONFIG *conf );
 int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf );
-char * get_crl_status_info ( int status );
+const char * get_crl_status_info ( int status );
 void force_crl_reload ( int sig );
 
 

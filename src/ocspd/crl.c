@@ -246,31 +246,36 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 	return (CRL_OK);
 }
 
-char * get_crl_status_info ( int status ) {
+const char * get_crl_status_info ( int status ) {
+
+	const char * unknown = "CRL status is unknown";
 
 	switch( status ) {
 		case CRL_OK:
 			return("CRL is VALID");
 			break;
-			;;
+
 		case CRL_ERROR_LAST_UPDATE:
 			return("ERROR in LAST UPDATE field");
 			break;
-			;;
+
 		case CRL_NOT_YET_VALID:
 			return("WARNING, CRL is NOT YET valid");
 			break;
-			;;
+
 		case CRL_ERROR_NEXT_UPDATE:
 			return("ERROR in NEXT UPDATE field");
 			break;
-			;;
+
 		case CRL_EXPIRED:
 			return("CRL is EXPIRED");
 			break;
-			;;
+
+		default:
+			return unknown;
 	}
-	return("CRL status is UNKNOWN");
+
+	return unknown;
 }
 
 void auto_crl_check ( int sig ) {

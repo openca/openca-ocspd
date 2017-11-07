@@ -32,10 +32,10 @@ typedef struct ocspd_cache_entry_st {
 	PKI_RWLOCK		   lock;
 
 	// Collision code lookup: next entry
-	struct ocspd_cache_entry_st next;
+	struct ocspd_cache_entry_st * next;
 
 	// Collision code lookup: prev entry
-	struct ocspd_cache_entry_st prev;
+	struct ocspd_cache_entry_st * prev;
 
 } OCSPD_CACHE_ENTRY;
 
