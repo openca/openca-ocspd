@@ -31,7 +31,7 @@ OCSPD_CACHE_ENTRY * OCSPD_CACHE_ENTRY_new(void) {
 	}
 
 	// Initializes the RWLock
-	PKI_RWLOCK_init(e->lock);
+	PKI_RWLOCK_init(&e->lock);
 
 	// Makes sure we null pointers
 	e->serialNumber = NULL;
@@ -166,7 +166,7 @@ int OCSPD_CACHE_entry_idx(ASN1_INTEGER *serialNumber) {
 	// of the value of the HASH of the serialNumber to
 	// build the index of the cache value. Since we want
 	// to maximize speed here
-	PKI_DIGEST x_dgst = NULL;
+	PKI_DIGEST *x_dgst = NULL;
 
 	return 0;
 }

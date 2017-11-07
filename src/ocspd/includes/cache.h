@@ -56,7 +56,7 @@ typedef struct ocspd_cache_st {
 void OCSPD_CACHE_ENTRY_free(OCSPD_CACHE_ENTRY *e);
 
 // Returns the number of the entry in the hash table
-int OCSPD_CACHE_entry_idx(OCSPD_CACHE_ENTRY *e);
+int OCSPD_CACHE_entry_idx(ASN1_INTEGER *serialNumber);
 
 // Allocates a new caching buffer
 OCSPD_CACHE * OCSPD_CACHE_new(size_t num_of_entries);
