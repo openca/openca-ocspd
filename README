@@ -28,13 +28,13 @@ Since v2.0.0+ , the OCSPD server requires the LibPKI package to be installed.
 You can download the latest package from any of our servers, more information
 about the LibPKI software can be found here:
 
-   http://www.openca.org/projects/libpki/
+   https://pki.openca.org/projects/libpki/
 
 Please Read the Online install documentation on wiki pages for both the LibPKI
 and the OCSPD packages at:
 
-   http://wiki.openca.org/wiki/index.php/LibPKI
-   http://wiki.openca.org/wiki/index.php/OCSP_Daemon
+   https://pki.openca.org/wiki/index.php/LibPKI
+   https://pki.openca.org/wiki/index.php/OCSP_Daemon
 
 NOTE: v3.1.2+ requires LibPKI v0.8.9+
 
