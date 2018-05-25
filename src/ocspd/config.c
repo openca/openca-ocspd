@@ -866,12 +866,10 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 			PKI_X509_DATA_NEXTUPDATE ));
 
 	if ((ca->crl_status = check_crl_validity(ca, conf)) == CRL_OK) {
-
 		// Some debugging info
 		PKI_log(PKI_LOG_INFO, "CRL Validity check PASSED [CA: %s]", 
 				ca->ca_id);
 	} else {
-
 		// Error, can not verify the CRL validity
 		PKI_log_err ( "CRL Validity check FAILED [CA: %s, Code: %d]", ca->ca_id, 
 						ca->crl_status );
