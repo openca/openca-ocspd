@@ -9,12 +9,19 @@
 # %define _missing_doc_files_terminate_build 0
 
 # Basic Definitions
+%define nobody    nobody
+%define nogroup   nobody
+
+# Basic Definitions
 %define ocspd_usr nobody
 %define ocspd_grp nobody
 
+# Different Specifications for different distributions
 %define is_mandrake %(test -e /etc/mandrake-release && echo 1 || echo 0)
 %define is_suse %(test -e /etc/SuSE-release && echo 1 || echo 0)
 %define is_fedora %(test -e /etc/fedora-release && echo 1 || echo 0)
+%define is_ubuntu %(test -e /usr/bin/ubuntu-bug && echo 1 || echo 0)
+%define is_centos  %(echo `rpm -qf /etc/redhat-release --qf '%{name} 0' 2>/dev/null | sed -e 's@centos-release@1 1@' | sed -e 's@[^ ]*@@' | awk {'print $1'}`)
 
 %define dist redhat
 %define disttag rh
@@ -32,20 +39,38 @@
 %define disttag rhfc
 %endif
 
+%if %is_ubuntu
+%define dist ubuntu
+%define disttag ub
+%define distver %(cat /etc/issue | grep -o -e '[0-9.]*' | sed -e 's/\\.//' )
+%else
+%if %is_centos
+%define dist centos
+%define disttag el
+%endif
+%endif
+
 %define distver %(release="`rpm -q --queryformat='%{VERSION}' %{dist}-release 2> /dev/null | tr . : | sed s/://g`" ; if test $? != 0 ; then release="" ; fi ; echo "$release")
 %define packer %(finger -lp `echo "$USER"` | head -n 1 | cut -d ' ' -f 2)
 
-%define ver      	2.1.0
+%define ver      	3.1.2
 %define RELEASE 	1
 %define rel     	%{?CUSTOM_RELEASE} %{!?CUSTOM_RELEASE:%RELEASE}
 %define prefix   	/usr
 %define mand		/usr/man
-%define libpki_req 	0.6.3
+%define libpki_req 	0.9.0
 
+%define working_release %rel.%{disttag}%{distver}
+
+%if %is_ubuntu
+%define working_release %rel.ubu
+%endif
+
+Summary: OpenCA PKI development library
 Summary: OpenCA OCSP Daemon
 Name: openca-ocspd
 Version: %ver
-Release: %rel.%{disttag}%{distver}
+Release: %{working_release}
 License: OpenCA License (BSD Style)
 Group: Network/Daemons
 Source: openca-ocspd-%{ver}.tar.gz
@@ -103,13 +128,24 @@ make DESTDIR="$RPM_BUILD_ROOT" prefix="%{prefix}" mandir="$RPM_BUILD_ROOT%{share
 %{prefix}/etc/init.d/*
 %{prefix}/etc/ocspd/*
 %{prefix}/var/*
-%{prefix}/lib
+# %{prefix}/lib
 # %{mand}/*
 
 %post
 
+[ -e "/etc/init.d/ocspd" ] || ln -s "%{prefix}/etc/init.d/ocspd" "/etc/init.d/ocspd"
+
+if [ -f "/usr/bin/systemctl" ] ; then
+  /usr/bin/systemctl daemon-reload
+fi
+
 %postun
 
+if [ -f "/usr/bin/systemctl" ] ; then
+  /usr/bin/systemctl disable ocspd
+fi
+
+[ -e "/etc/init.d/ocspd" ] || rm -f "/etc/init.d/ocspd"
 
 %changelog
 * Sat Aug 29 2009 Massimiliano Pala <madwolf@openca.org>

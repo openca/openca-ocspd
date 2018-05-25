@@ -169,7 +169,8 @@ err:
 	my_exit( -1, "ERROR:General error, please check the logs");
 
 end:
-	return (ret);
+
+	return ret;
 }
 
 int writePid ( int pid, char *pidfile ) {

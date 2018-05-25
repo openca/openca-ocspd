@@ -50,8 +50,6 @@ void * thread_main ( void *arg )
 	int thread_nr = -1;
 	int *arg_int  = NULL;
 
-	struct sigaction sa;
-
 	PKI_X509_OCSP_REQ  *req = NULL;
 	PKI_X509_OCSP_RESP *resp = NULL;
 
@@ -136,8 +134,6 @@ void * thread_main ( void *arg )
 					PKI_X509_OCSP_RESP_STATUS_MALFORMEDREQUEST );
 			}
 		}
-
-end:
 
 		// If we have a response, let's send it over the wire and free
 		// the associated memory

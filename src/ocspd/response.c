@@ -126,7 +126,7 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
  	// verify capabilities!
 	if (conf->testmode)
 	{
-		PKI_STRING *signature = NULL;
+		const PKI_STRING *signature = NULL;
 
 		PKI_log(PKI_LOG_ALWAYS,
 			"WARNING: TestMode (Wrong Signatures): Flipping first bit in Signature");
@@ -144,10 +144,10 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 			// Flip The First n-Bit of the Signature (n=1)
 			for (i=0; i < 1; i++ )
 			{
-				if(ASN1_BIT_STRING_get_bit(signature, i))
-    				ASN1_BIT_STRING_set_bit(signature, i, 0);
+				if (ASN1_BIT_STRING_get_bit((PKI_STRING *)signature, i))
+    				ASN1_BIT_STRING_set_bit((PKI_STRING *)signature, i, 0);
     			else
-    				ASN1_BIT_STRING_set_bit(signature, i, 1);
+    				ASN1_BIT_STRING_set_bit((PKI_STRING *)signature, i, 1);
 			}
 
 			r = resp->value;
@@ -218,9 +218,6 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 
 	int i, id_count;
 	int signResponse;
-
-	int use_server_cert = 0;
-	int use_server_cacert = 0;
 
 	PKI_TIME *thisupd = NULL;
 	PKI_TIME *nextupd = NULL;
@@ -422,7 +419,11 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			void *ext = NULL;
 
 			// If extensions are found, process them
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+			if (X509_REVOKED_get0_extensions(entry))
+#else
 			if (entry->extensions)
+#endif
 			{
 				ASN1_ENUMERATED *asn = NULL;
 
@@ -436,8 +437,14 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 				ext = X509_REVOKED_get_ext_d2i( entry, NID_invalidity_date, NULL, NULL );
 			}
 
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+			if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
+					X509_REVOKED_get0_serialNumber(entry), thisupd, 
+									nextupd, reason, ext )) == PKI_ERR)
+#else
 			if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
 					entry->revocationDate, thisupd, nextupd, reason, ext )) == PKI_ERR)
+#endif
 			{
 				PKI_log_err ("Can not add a simple resp into the OCSP response");
 
@@ -678,7 +685,11 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 		tmp = ca->cid;
 
 		/* Check for hashes */
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash, &(b->issuerNameHash))) != 0 )
+#else
 		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash, b->issuerNameHash)) != 0 )
+#endif
 		{
 			if (conf->debug) 
 			{
@@ -692,7 +703,11 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 			PKI_log_debug("CRL::CA [%s] nameHash OK", ca->ca_id);
 		}
 
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, &(b->issuerKeyHash))) != 0)
+#else
 		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, b->issuerKeyHash)) != 0)
+#endif
 		{
 			if (conf->debug)
 			{
@@ -743,7 +758,11 @@ X509_REVOKED *OCSPD_REVOKED_find (CA_LIST_ENTRY *ca, ASN1_INTEGER *serial) {
 		r = sk_X509_REVOKED_value(ca->crl_list, curr);
 
 		/* Compare the two serials */
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+		cmp_val = ASN1_INTEGER_cmp(X509_REVOKED_get0_serialNumber(r), serial);
+#else
 		cmp_val = ASN1_INTEGER_cmp(r->serialNumber, serial);
+#endif
 
 		if( cmp_val > 0 ) {
 			end = curr - 1;

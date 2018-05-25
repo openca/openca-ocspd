@@ -9,6 +9,12 @@
 #ifndef HEADER_OPENCA_OCSPD_GENERAL_H
 #define HEADER_OPENCA_OCSPD_GENERAL_H
 
+#if defined(__clang__) || defined (__GNUC__)
+# define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+#else
+# define ATTRIBUTE_NO_SANITIZE_ADDRESS
+#endif
+
 #include <libpki/pki.h>
 
 #include <strings.h>
@@ -109,8 +115,12 @@ typedef struct ca_entry_certid
 #define sk_CA_ENTRY_CERTID_sort(st) SKM_sk_sort(CA_ENTRY_CERTID, (st))
 #define sk_CA_ENTRY_CERTID_find(st) SKM_sk_find(CA_ENTRY_CERTID, (st))
 
+/* Forward Declaration */
+typedef struct ocspd_cache_st OCSPD_CACHE;
+
 /* List of available CAs */
 typedef struct ca_list_st {
+
 	/* CA Identifier - Name from config file */
 	char *ca_id;
 
@@ -155,6 +165,15 @@ typedef struct ca_list_st {
 	
 	/* Responder Identifier Type */
 	int response_id_type;
+
+	/* CREDS for TLS connections */
+	PKI_CRED * creds;
+
+	/* Basic Template for the response */
+	PKI_OCSP_RESP * resp_template;
+
+	/* CA Cache */
+	OCSPD_CACHE * oc;
 
 } CA_LIST_ENTRY;
 
@@ -280,6 +299,7 @@ typedef struct ocspd_config {
 #include "response.h"
 #include "request.h"
 #include "crl.h"
+#include "cache.h"
 
 #define HTTP_POST		0
 #endif

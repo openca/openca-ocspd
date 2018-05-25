@@ -1,6 +1,10 @@
+* Oct 18 2017 Massimiliano Pala <madwolf@openca.org>
+- Fixed memory leak in URL entry for OCSPD_build_ca_list()
+
 * Mar 25 2015 Massimiliano Pala <madwolf@openca.org>
 - Added the responderIdType option for CA configuration
 - Removed not-used addResponderKeyID option for OCSP responder config
+- Updated requirement for LibPKI v0.8.9+
 
 * Mar 24 2015 Massimiliano Pala <madwolf@openca.org>
 - Modified behavior by providing normal responses if crlValidityCheck is 0
