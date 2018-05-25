@@ -23,255 +23,333 @@ extern OCSPD_CONFIG * ocspd_conf;
 // extern pthread_rwlock_t crl_lock;
 // extern pthread_cond_t crl_cond;
 
-int ocspd_load_ca_crl ( CA_LIST_ENTRY *a, OCSPD_CONFIG *conf ) {
+int ocspd_load_ca_crl(CA_LIST_ENTRY *caEntry, OCSPD_CONFIG *conf) {
 
-	if(!a) return(-1);
+	// Input checks
+	if (!caEntry || !conf || !caEntry->crl_url) {
 
-	if( conf->debug )
-		PKI_log_debug( "ACQUIRING WRITE LOCK -- BEGIN CRL RELOAD");
+		// If we do not have a URL, let's report the error
+		if (!caEntry->crl_url) PKI_log_err(
+			"Missing URL for where to access the CRL URL [CA: %s]",
+			ca->ca_id);
+		return (-1);
+	}
 
-	PKI_RWLOCK_write_lock ( &conf->crl_lock );
-	// pthread_rwlock_wrlock( &crl_lock );
-	if( conf->debug )
-		PKI_log_debug( "INFO::LOCK ACQUIRED (CRL RELOAD)");
+	// Acquires the CRL lock
+	PKI_RWLOCK_write_lock(&conf->crl_lock);
 
-	if( a->crl ) PKI_X509_CRL_free ( a->crl );
+	// Free current CRL memory
+	if (caEntry->crl) PKI_X509_CRL_free(caEntry->crl);
+	a->crl = NULL; // Safety
 
-	a->crl = NULL;
+	// Free the list (it seems it is static from OpenSSL and
+	// does not need to be freed explicitly (check sk_X509_REVOKED_free)
+	// (check the x509/x509.h:606 X509_CRL_get_REVOKED() definition)
 	a->crl_list = NULL;
 
-	if( a->crl_url == NULL ) {
-		 PKI_log_err ( "Missing CRL URL for CA %s", a->ca_id );
+	// We now re-load the CRL
+	if( (caEntry->crl = PKI_X509_CRL_get_url(caEntry->crl_url,
+	                                          NULL, NULL)) == NULL ) {
+		PKI_log_err("Can not reload CRL [CA: %s, URL: %s]", 
+						caEntry->ca_id, caEntry->crl_url->url_s);
+		PKI_RWLOCK_release_write(&conf->crl_lock);
 		return(-1);
 	}
 
-	/* We now re-load the CRL */
-	if( (a->crl = PKI_X509_CRL_get_url( a->crl_url, NULL, NULL)) == NULL ) {
-		PKI_log_err ("Can not reload CRL [ %s ] for CA [%s]", 
-						a->crl_url->addr, a->ca_id);
-		PKI_RWLOCK_release_write ( &conf->crl_lock );
-		return(-1);
+	// Debugging Info
+	PKI_log(PKI_LOG_INFO, "CRL successfully reloaded [CA: %s, URL: %s]",
+			caEntry->ca_id, caEntry->crl_url->url_s );
+
+	// Let's get the CRLs entries, if any
+	if( ocspd_build_crl_entries_list ( a, a->crl ) == NULL) { 
+		PKI_log(PKI_LOG_INFO, "CRL has 0 (Zero) Entries [CA: %s, URL: %s]",
+				caEntry->ca_id, caEntry->crl_url->url_s );
 	}
 
-	if( conf->verbose )
-		PKI_log( PKI_LOG_INFO, "INFO::CRL successfully reloaded [ %s ]",
-			a->ca_id );
+	// If previous values are there, then we clear them up
+	if (a->lastUpdate) ASN1_TIME_free(a->lastUpdate);
+	if (a->nextUpdate) ASN1_TIME_free(a->nextUpdate);
 
-	/* Let's get the CRLs entries, if any */
-	if( ocspd_build_crl_entries_list ( a, a->crl ) == NULL ) { 
-		if( conf->verbose )
-			PKI_log(PKI_LOG_INFO, "INFO::No Entries for CRL [ %s ]",
-				a->ca_id );
-	};
+	// Get new values from the recently loaded CRL
+	a->lastUpdate = PKI_TIME_dup(
+		PKI_X509_CRL_get_data(caEntry->crl, PKI_X509_DATA_LASTUPDATE ));
+	a->nextUpdate = PKI_TIME_dup (
+		PKI_X509_CRL_get_data(caEntry->crl, PKI_X509_DATA_NEXTUPDATE ));
 
-	if(conf->verbose)
-		PKI_log( PKI_LOG_INFO, "INFO::CRL loaded successfully [ %s ]", 
-								a->ca_id );
-
-	/* If previous values are there, then we clear them up */
-	if ( a->lastUpdate ) ASN1_TIME_free(a->lastUpdate);
-	if ( a->nextUpdate ) ASN1_TIME_free(a->nextUpdate);
-
-	/* Get new values from the recently loaded CRL */
-	a->lastUpdate = M_ASN1_TIME_dup (
-		PKI_X509_CRL_get_data ( a->crl, PKI_X509_DATA_LASTUPDATE ));
-	a->nextUpdate = M_ASN1_TIME_dup (
-		PKI_X509_CRL_get_data ( a->crl, PKI_X509_DATA_NEXTUPDATE ));
-
-	if(conf->debug) PKI_log_debug("RELEASING LOCK (CRL RELOAD)");
-	PKI_RWLOCK_release_write ( &conf->crl_lock );
-	// pthread_rwlock_unlock ( &crl_lock );
-	if(conf->debug) PKI_log_debug ( "LOCK RELEASED --END--");
+	// Releases the lock
+	PKI_RWLOCK_release_write(&conf->crl_lock);
 
 	/* Now check the CRL validity */
-	a->crl_status = check_crl_validity( a, conf );
+	a->crl_status = check_crl_validity(a, conf);
 
-	if( a->crl_status == CRL_OK ) {
-		PKI_log(PKI_LOG_ALWAYS, "%s's CRL reloaded (OK)", a->ca_id);
+	// Now check the CRL validity
+	if ((caEntry->crl_status = check_crl_validity(caEntry, conf)) == CRL_OK) {
+		PKI_log(PKI_LOG_INFO, 
+				"CRL reloaded and verified [CA: %s, Status: OK]",
+				caEntry->ca_id);
+	} else {
+		PKI_log_err("CRL Status not verified [CA: %s, Status: %d]",
+				caEntry->ca_id, caEntry->crl_status);
+		return -1;
 	}
 
-	return(0);
+	return 0;
 }
 
 
 int ocspd_reload_crls ( OCSPD_CONFIG *conf ) {
 
-	int i, err;
+	int i = 0, err = 0;
 
 	CA_LIST_ENTRY *a = NULL;
 
-	if( conf->verbose )
-		PKI_log( PKI_LOG_INFO, "INFO::CRL Reload %ld CAs",
+	PKI_log(PKI_LOG_ALWAYS, "Auto CRL Reload Initiated [Total CAs: %ld]",
 			PKI_STACK_elements (conf->ca_list));
 
-	err = 0;
-	for( i=0; i < PKI_STACK_elements (conf->ca_list); i++ ) {
+	for (i = 0; i < PKI_STACK_elements(conf->ca_list); i++) {
+
+		// Gets the CA config element
 		a = PKI_STACK_get_num ( conf->ca_list, i );
 
-		if( conf->verbose )
-			PKI_log(PKI_LOG_INFO, "INFO::Reloading CRL for CA [%s]",
-							a->ca_id );
+		// Some Info
+		PKI_log(PKI_LOG_INFO, "Reloading CRL for CA [Num: %d (of %d), CA: %s]",
+					i, PKI_STACK_elements(conf->ca_list), a->ca_id );
 
-		if( ocspd_load_ca_crl(a, conf) < 0 ) {
-			PKI_log_err("Reload CRL for CA [%s]", a->ca_id );
+		// Loads the CRL for the specific CA
+		if (ocspd_load_ca_crl(a, conf) < 0 ) {
+
+			// Logs the error
+			PKI_log_err("Can not reload CRL for CA [Num: %d (of %d), CA: %s]", 
+					i, PKI_STACK_elements(conf->ca_list), a->ca_id );
+
+			// Updates the Error Counter
 			err++;
+
+			// Proceed to the next entry
 			continue;
 		}
 	}
 
-	PKI_log(PKI_LOG_INFO, "CRL Reloaded (%d ok, %d err)",
-		i - err, err );
+	// Some Debugging Info
+	PKI_log(PKI_LOG_ALWAYS, "Auto CRL Reload Terminated "
+			"[Success: %d, Errors: %d]", i - err, err );
 
 	return(1);
 }
 
-int check_crl ( PKI_X509_CRL *x_crl, PKI_X509_CERT *x_cacert,
-		OCSPD_CONFIG *conf ) {
+int check_crl(PKI_X509_CRL  * x_crl,
+	          PKI_X509_CERT * x_cacert,
+	          OCSPD_CONFIG  * conf) {
 
-	PKI_X509_KEYPAIR_VALUE *pkey = NULL;
+	const PKI_X509_KEYPAIR_VALUE *pkey = NULL;
+		// Public Key Value to verify the CRL with
+
 	PKI_X509_KEYPAIR *k = NULL;
+		// Public Key X509 Structure to verify the CRL with
 
 	int ret = -1;
+		// Return Code
 
+	char * x_subj = NULL;
+		// CA Cert Subject
+
+	// Required Input Checks
 	if (!conf) return (-1);
 
+	// Acquires the READ lock over the CRL
 	PKI_RWLOCK_read_lock ( &conf->crl_lock );
-	if( !x_crl || !x_crl->value || !x_cacert || !x_cacert->value ) {
-		if( conf->verbose ) {
-			if(!x_crl || !x_crl->value) 
-					PKI_log_err ("CRL missing");
-			if(!x_cacert || !x_cacert->value) 
-					PKI_log_err("CA cert missing");
-		}
-		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		return(-1);
+
+	// Checks for the required values to be there
+	if (!x_crl || !x_crl->value || !x_cacert || !x_cacert->value) {
+
+		// Reports if the CRL is missing
+		if(!x_crl || !x_crl->value) PKI_log_err("CRL missing");
+
+		// Reports if the CA Certificate is missing
+		if(!x_cacert || !x_cacert->value) PKI_log_err("CA cert missing");
+
+		// Releases the READ lock
+		PKI_RWLOCK_release_read(&conf->crl_lock);
+
+		// Failed to check the CRL
+		return -1;
 	}
 
-	/* Gets the Public Key of the CA Certificate */
-	if((pkey = PKI_X509_CERT_get_data( x_cacert, 
-				PKI_X509_DATA_PUBKEY )) == NULL ) { 
-		PKI_log_err( "Can not parse PubKey from CA Cert");
-		PKI_RWLOCK_release_read ( &conf->crl_lock );
+	// Gets the Public Key of the CA Certificate
+	if ((pkey = PKI_X509_CERT_get_data(x_cacert, 
+				PKI_X509_DATA_PUBKEY)) == NULL ) { 
+
+		// Reports the error
+		PKI_log_err("Can not parse PubKey from CA Cert");
+
+		// Releases the READ lock
+		PKI_RWLOCK_release_read(&conf->crl_lock);
+
+		// Failed to check the CRL
 		return(-3);
 	}
 
-	if ((k = PKI_X509_new_value(PKI_DATATYPE_X509_KEYPAIR, pkey, NULL))
-							== NULL ) {
-		PKI_log_err ("Memory Error!");
+	// Builds the X509 KEYPAIR structure from the
+	// CA key's value extracted from the CA's cert
+	if ((k = PKI_X509_new_value(PKI_DATATYPE_X509_KEYPAIR, 
+							(void *)pkey, NULL)) == NULL ) {
+
+		// Error while creating the X509_KEYPAIR structure
+		PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
+
+		// Releases the READ lock
 		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		return(-3);
+
+		// Failed to check the CRL
+		return -4;
 	}
 	
-	if ( PKI_X509_verify ( x_crl, k ) == PKI_OK ) {
-		PKI_log_debug("CRL signature is verified!");
-		ret = PKI_OK;
+	// Some debugging info
+	PKI_log_debug("Got the public key from the CA cert [Scheme: %s, Key Size: %d]",
+		     PKI_SCHEME_ID_get_parsed(PKI_X509_KEYPAIR_get_scheme(k)),
+		     PKI_X509_KEYPAIR_get_size(k));
+
+	// Gets the parsed SubjectName of the CA Cert
+	if ((x_subj = PKI_X509_CERT_get_parsed(x_cacert, PKI_X509_DATA_SUBJECT)) == NULL) 
+		x_subj = strdup("<not set>");
+
+	// Verifies and provides some logging
+	if ((ret = PKI_X509_verify(x_crl, k)) == PKI_OK) {
+
+		// CRL correctly verified
+		PKI_log(PKI_LOG_INFO, "CRL signature is verified "
+			"[Code: %d, CA Subject: %s]", ret, x_subj);
+
 	} else {
-		ret = PKI_ERR;
+
+		// CRL could not be verified, report the issue
+		PKI_log_err("CRL signature is NOT verified "
+			"[Code: %d, CA Subject: %s]!", ret, x_subj);
 	}
 
-	k->value = NULL;
-	PKI_X509_KEYPAIR_free ( k );
-
+	// Free the RW lock on the CRL
 	PKI_RWLOCK_release_read ( &conf->crl_lock );
 
-	if ( ret > 0 ) {
-		PKI_log(PKI_LOG_INFO, "CRL matching CA cert ok [ %d ]",
-				ret);
-	}
+	// Make sure we do not free the internal value
+	k->value = NULL;
 
+	// Free the outer shell for the key
+	PKI_X509_KEYPAIR_free(k);
+
+	// Free the Memory
+	PKI_Free(x_subj);
+
+	// All Done
 	return ret;
 }
 
 int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
+
 	int i;
 
+	// Allocates the Lock for CRL access
 	PKI_RWLOCK_read_lock ( &conf->crl_lock );
-	// pthread_rwlock_rdlock( &crl_lock );
 
-	if( (!ca) || (!ca->crl) || (!(ca->lastUpdate)) ) {
-		PKI_log_err ("CRL::[%s]::Verify error (memory alloc)", 
-								ca->ca_id );
+	// Checks for the passed 'ca' parameter
+	if (!ca || !ca->crl) {
+
+		// Reports the Error
+		PKI_log_err ("Error in CA internal config status [CA: %s]", ca->ca_id );
+		
+		// Releases the lock
 		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		// pthread_rwlock_unlock( &crl_lock );
-		return(CRL_ERROR_LAST_UPDATE);
+
+		// All Done
+		return CRL_ERROR_LAST_UPDATE;
 	}
 
-	i=X509_cmp_time(ca->lastUpdate, NULL);
-	if (i == 0) {
-		PKI_log_err( "CRL [%s] LAST UPDATE error (code %d)", 
-			ca->ca_id, CRL_ERROR_LAST_UPDATE );
+	// If no lastUpdate is available or it is in the future
+	// let's return the lastUpdate error
+	if (ca->lastUpdate == NULL || 
+			(i = X509_cmp_time(ca->lastUpdate, NULL)) >= 0) {
 
-		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		ca->crl_status = CRL_ERROR_LAST_UPDATE;
-		// pthread_rwlock_unlock( &crl_lock );
-		return(CRL_ERROR_LAST_UPDATE);
-	} else if (i > 0) {
-		PKI_log_err("WARING::CRL [%s] NOT YET valid (code %d)", 
+		if (i == 0) {
+			// Here the lastUpdate is in the future
+			PKI_log_err("CRL NOT YET valid [CA: %s, Code: %d]", 
 				ca->ca_id, CRL_NOT_YET_VALID);
-		ca->crl_status = CRL_NOT_YET_VALID;
-		PKI_RWLOCK_release_read ( &conf->crl_lock );
-		// pthread_rwlock_unlock( &crl_lock );
-		return(CRL_NOT_YET_VALID);
-	}
-                                                                                
-	if(!conf->crl_reload_expired) {
-		if(ca->nextUpdate) {
-			i=X509_cmp_time(ca->nextUpdate, NULL);
-                                                                                  
-			if (i == 0) {
-				PKI_RWLOCK_release_read ( &conf->crl_lock );
-				// pthread_rwlock_unlock( &crl_lock );
-				PKI_log_err ("CRL [%s] NEXT UPDATE error (code %d)", 
-						ca->ca_id, CRL_ERROR_NEXT_UPDATE );
-				ca->crl_status = CRL_ERROR_NEXT_UPDATE;
-				// pthread_rwlock_unlock( &crl_lock );
-				return(CRL_ERROR_NEXT_UPDATE);
-			} else if (i < 0) {
-				PKI_RWLOCK_release_read ( &conf->crl_lock );
-				// pthread_rwlock_unlock( &crl_lock );
-				PKI_log_err ("CRL [%s] IS EXPIRED (code %d)",
-						ca->ca_id, CRL_EXPIRED );
-				ca->crl_status = CRL_EXPIRED;
-				return(CRL_EXPIRED);
-			}
+
+			// Updates the CRL internal status
+			ret = CRL_NOT_YET_VALID;
+
 		} else {
-			PKI_log_err ("CRL [%s] has no nextUpdate!", ca->ca_id );
+			// Here we do not have a lastUpdate
+			PKI_log_err( "LAST UPDATE error [CA: %s, Code: %d]", 
+				ca->ca_id, CRL_ERROR_LAST_UPDATE );
+
+			// Updates the CRL internal status
+			ret = CRL_ERROR_LAST_UPDATE;
 		}
 	}
 
-	PKI_RWLOCK_release_read ( &conf->crl_lock );
-	// pthread_rwlock_unlock( &crl_lock );
+	// Compares the nextUpdate time with now (NULL)
+	if (ca->nextUpdate == NULL || 
+			(i = X509_cmp_time(ca->nextUpdate, NULL)) <= 0) {
+                                                                                  
+		if (i == 0) {
+			// nextUpdate Error
+			PKI_log_err ("NEXT UPDATE error [CA: %s, Code: %d]",
+				ca->ca_id, CRL_ERROR_NEXT_UPDATE );
 
-	PKI_log_debug("CRL::Verify %d [OK=%d]", i, CRL_OK );
+			// Updates the CRL internal status
+			ret = CRL_ERROR_NEXT_UPDATE;
 
-	return (CRL_OK);
+		} else {
+			// CRL is expired Error
+			PKI_log_err ("CRL IS EXPIRED [CA: %s, Code: %d]",
+				ca->ca_id, CRL_EXPIRED );
+
+			// Updates the CRL internal status
+			ret = CRL_EXPIRED;
+		}
+	}
+
+	// Releases the lock
+	PKI_RWLOCK_release_read(&conf->crl_lock);
+
+	// Provides some debugging
+	if (ret == PKI_OK) {
+		PKI_log_debug("CRL Validity Period OK [CA: %s]", ca->ca_id);
+	}
+
+	// All Done
+	return ca->crl_status;
 }
 
-char * get_crl_status_info ( int status ) {
+const char * get_crl_status_info ( int status ) {
+
+	const char * unknown = "CRL status is unknown";
 
 	switch( status ) {
 		case CRL_OK:
 			return("CRL is VALID");
 			break;
-			;;
+
 		case CRL_ERROR_LAST_UPDATE:
 			return("ERROR in LAST UPDATE field");
 			break;
-			;;
+
 		case CRL_NOT_YET_VALID:
 			return("WARNING, CRL is NOT YET valid");
 			break;
-			;;
+
 		case CRL_ERROR_NEXT_UPDATE:
 			return("ERROR in NEXT UPDATE field");
 			break;
-			;;
+
 		case CRL_EXPIRED:
 			return("CRL is EXPIRED");
 			break;
-			;;
+
+		default:
+			return unknown;
 	}
-	return("CRL status is UNKNOWN");
+
+	return unknown;
 }
 
 void auto_crl_check ( int sig ) {
@@ -279,11 +357,12 @@ void auto_crl_check ( int sig ) {
 	CA_LIST_ENTRY *ca = NULL;
 	int i, ret;
 
-	if( ocspd_conf->verbose == 1 ) {
-		PKI_log(PKI_LOG_INFO, "auto_crl_check() started");
-	}
-
+	// If Auto CRL Check is enable, let's start
 	if( ocspd_conf->crl_auto_reload ) {
+
+		// Debugging Info
+		PKI_log_debug(LOG_INFO, "Auto CRL Check Process started");
+
 		ocspd_conf->current_crl_reload += 
 					ocspd_conf->alarm_decrement;
 
@@ -292,71 +371,77 @@ void auto_crl_check ( int sig ) {
 
 			ocspd_conf->current_crl_reload = 0;
 
-			/* Here we de-allocate the CRL entries and
-			   reload the CRL */
-			if( ocspd_reload_crls( ocspd_conf ) == 0 ) {
+			// Here we de-allocate the CRL entries and
+			// reload the CRL
+			if (ocspd_reload_crls(ocspd_conf) == 0) {
+
+				// Can not reload CRLs
 				PKI_log_err("Error reloading CRLs");
+
 			} else {
-				if( ocspd_conf->verbose )
-					PKI_log(PKI_LOG_INFO, "CRLs reloaded.");
+
+				// Reports successful reload
+				PKI_log(PKI_LOG_ALWAYS,
+					"Auto CRLs reload completed successfully.");
 			}
 
-			alarm( (unsigned int) ocspd_conf->alarm_decrement );
+			// Restart the Alarm
+			alarm((unsigned int) ocspd_conf->alarm_decrement);
 
+			// All Done
 			return;
 		}
 	}
 
-	if( ocspd_conf->verbose == 1 ) {
-		PKI_log(PKI_LOG_INFO, "auto_crl_check() continuing");
-	}
-
+	// Cycles through all the configured CAs
 	for( i=0; i < PKI_STACK_elements (ocspd_conf->ca_list); i++ ) {
 
+		// Retrieves the CA configuration
 		if((ca = PKI_STACK_get_num (ocspd_conf->ca_list, i)) == NULL) {
+			// If nothing is returned, let's get to the next element
+			// (should never happen)
 			continue;
 		}
 
-		if( ocspd_conf->verbose && ca->ca_id )
-			PKI_log(PKI_LOG_INFO, "Auto CRL checking [%s]", ca->ca_id);
+		// Some Info for the logs
+		PKI_log(PKI_LOG_INFO, "Auto CRL checking [CA %d: %s]",
+			i, ca->ca_id ? ca->ca_id : "<name not set in config>");
 
+		// Checks the CRL validity
+		ret = check_crl_validity(ca, ocspd_conf);
 
-		ret = check_crl_validity ( ca, ocspd_conf );
+		// Compares the returned value with the one that was
+		// previously set in the CA's entry
+		if (ca->crl_status != ret) {
 
-		if( ca->crl_status != ret ) {
-			if(ocspd_conf->verbose) 
-				PKI_log(PKI_LOG_INFO,"Detected CRL status change");
+			// Some logging information
+			PKI_log(PKI_LOG_ALWAYS,"Auto CRL Detected CRL status change [CA %d: %s]",
+				i, ca->ca_id ? ca->ca_id : "<name not set in config>");
+
+			// Updates the CA's entry
 			ca->crl_status = ret;
 
+			// Let's load the CA's CRL
 			ocspd_load_ca_crl (ca, ocspd_conf);
 
+			// Next Entry
 			continue;
+
 		} else {
-			if( ocspd_conf->verbose && ca->ca_id ) 
-				PKI_log(PKI_LOG_INFO,"No CRL status change for [%s]",
-					ca->ca_id);
+
+			// Some Info for the logs
+			PKI_log(PKI_LOG_INFO,"No CRL status change [CA %d: %s]",
+				i, ca->ca_id ? ca->ca_id : "<name not set in config>");
 		}
-		// syslog( LOG_INFO, "Forcing CRL Reloading for [%s]",
-		// 	ca->ca_id ? ca->ca_id : "No Name" );
-		// ocspd_load_ca_crl (ca, ocspd_conf);
 	}
 
-	/*
-	if( ocspd_conf->crl_check_validity ) {
-		if( verbose )
-			syslog(LOG_INFO, "Checking again CRL in %d secs",
-				ocspd_conf->crl_check_validity );
+	// Some Debugging Information
+	PKI_log_debug("Auto CRL Check Process completed");
 
-		alarm( ocspd_conf->crl_check_validity );
-	}
-	*/
+	// Reset the Alarm
+	alarm((unsigned int) ocspd_conf->alarm_decrement);
 
-	if( ocspd_conf->verbose == 1 ) {
-		PKI_log(LOG_INFO, "auto_crl_check() completed");
-	}
-
-	alarm( (unsigned int) ocspd_conf->alarm_decrement );
-
+	// All Done
 	return;
 }
 
@@ -365,4 +450,4 @@ void force_crl_reload ( int sig ) {
 	ocspd_reload_crls ( ocspd_conf );
 
 	return;
-};
+}
