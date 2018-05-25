@@ -1,6 +1,6 @@
 =============================================================================
                              OpenCA's OCSP Responder
-               (c) 2001-2013 by Massimiliano Pala and OpenCA Labs
+               (c) 2001-2018 by Massimiliano Pala and OpenCA Labs
                              OpenCA Licesed Software
 =============================================================================
 
@@ -16,9 +16,9 @@ example of a configuration file and a way to start and make request to the
 responded can be found into the etc/ directory.
 
 To get a full list of the supported command-line options simply call the
-openca-ocspd program with '-' as an argument:
+openca-ocspd program with '-h' as an argument:
 
-	$ openca-ocspd -
+	$ openca-ocspd -h
 
 
 2. INSTALL
@@ -28,13 +28,13 @@ Since v2.0.0+ , the OCSPD server requires the LibPKI package to be installed.
 You can download the latest package from any of our servers, more information
 about the LibPKI software can be found here:
 
-   https://pki.openca.org/projects/libpki/
+   https://www.openca.org/projects/libpki/
 
 Please Read the Online install documentation on wiki pages for both the LibPKI
 and the OCSPD packages at:
 
-   https://pki.openca.org/wiki/index.php/LibPKI
-   https://pki.openca.org/wiki/index.php/OCSP_Daemon
+   https://www.openca.org/wiki/index.php/LibPKI
+   https://www.openca.org/wiki/index.php/OCSP_Daemon
 
 NOTE: v3.1.2+ requires LibPKI v0.8.9+
 
