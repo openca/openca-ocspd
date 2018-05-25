@@ -69,13 +69,14 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		pathmem = PKI_MEM_new_data(strlen(req_pnt), (unsigned char *) req_pnt);
 		if (pathmem == NULL)
 		{
-			PKI_log_err("Memory Allocation Error!");
+			PKI_log_err("Buffer Data Error (size = %d, data = 0x%p)!", 
+				(req_pnt ? strlen(req_pnt) : -1), req_pnt);
 			goto err;
 		}
 
 		if (PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_URL, 0) != PKI_OK)
 		{
-			PKI_log_err("Memory Allocation Error!");
+			PKI_log_err("Error while decoding from URL format!");
 			PKI_MEM_free(pathmem);
 			goto err;
 		}
@@ -90,7 +91,9 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		// Generates a new mem bio from the pathmem
 		if((mem = BIO_new_mem_buf(pathmem->data, (int) pathmem->size)) == NULL)
 		{
-			PKI_log_err("Memory Allocation Error");
+			PKI_log_err("Error Creating a new BIO mem buf (size = %d, data = 0x%p)",
+				pathmem->size, pathmem->data);
+			
 			PKI_MEM_free(pathmem);
 			goto err;
 		}
