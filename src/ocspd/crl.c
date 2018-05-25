@@ -64,6 +64,9 @@ int ocspd_load_ca_crl(CA_LIST_ENTRY *caEntry, OCSPD_CONFIG *conf) {
 	if (ocspd_build_crl_entries_list(caEntry, caEntry->crl) == NULL) { 
 		PKI_log(PKI_LOG_INFO, "CRL has 0 (Zero) Entries [CA: %s, URL: %s]",
 				caEntry->ca_id, caEntry->crl_url->url_s );
+	} else {
+		PKI_log(PKI_LOG_INFO, "CRL has %d  Entries [CA: %s, URL: %s]",
+                                caEntry->entries_num, caEntry->ca_id, caEntry->crl_url->url_s);
 	}
 
 	// If previous values are there, then we clear them up
@@ -138,8 +141,8 @@ int ocspd_reload_crls ( OCSPD_CONFIG *conf ) {
 }
 
 int check_crl(PKI_X509_CRL  * x_crl,
-	          PKI_X509_CERT * x_cacert,
-	          OCSPD_CONFIG  * conf) {
+	      PKI_X509_CERT * x_cacert,
+	      OCSPD_CONFIG  * conf) {
 
 	const PKI_X509_KEYPAIR_VALUE *pkey = NULL;
 		// Public Key Value to verify the CRL with
@@ -245,7 +248,7 @@ int check_crl(PKI_X509_CRL  * x_crl,
 
 int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 
-	int i, ret;
+	int i = -1, ret = PKI_OK;
 
 	// Allocates the Lock for CRL access
 	PKI_RWLOCK_read_lock ( &conf->crl_lock );
@@ -380,11 +383,6 @@ void auto_crl_check ( int sig ) {
 				// Can not reload CRLs
 				PKI_log_err("Error reloading CRLs");
 
-			} else {
-
-				// Reports successful reload
-				PKI_log(PKI_LOG_ALWAYS,
-					"Auto CRLs reload completed successfully.");
 			}
 
 			// Restart the Alarm

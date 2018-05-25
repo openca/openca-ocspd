@@ -619,10 +619,10 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 		}
 
 		// Loads the CRL from the parsed URL
-    // Failure loading the CRL might not be a fatal error,
+		// Failure loading the CRL might not be a fatal error,
 		// we let the OCSP continue since the loading error
 		// might be temporary
-		if (PKI_OK != OCSPD_load_crl(ca, handler) == PKI_ERR) {
+		if (PKI_OK != OCSPD_load_crl(ca, handler)) {
 
 			// Error Output
 			PKI_log_err("Can not load CRL [CA: %s]", ca->ca_id);
@@ -865,23 +865,26 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 		PKI_X509_CRL_get_data (ca->crl,
 			PKI_X509_DATA_NEXTUPDATE ));
 
-	if ((ca->crl_status = check_crl_validity(ca, conf )) == CRL_OK ) {
-
+	if ((ca->crl_status = check_crl_validity(ca, conf)) == CRL_OK) {
 		// Some debugging info
 		PKI_log(PKI_LOG_INFO, "CRL Validity check PASSED [CA: %s]", 
 				ca->ca_id);
 	} else {
-
 		// Error, can not verify the CRL validity
 		PKI_log_err ( "CRL Validity check FAILED [CA: %s, Code: %d]", ca->ca_id, 
 						ca->crl_status );
 	}
 
 	// Let's get the CRLs entries, if any
-	if( ocspd_build_crl_entries_list ( ca, ca->crl ) == NULL ) { 
+	if (ocspd_build_crl_entries_list(ca, ca->crl) == NULL) { 
 
 		// Info, reports the fact that there are no entries in the CRL
-		PKI_log(PKI_LOG_INFO, "CRL has 0 (Zero) Entries [CA: %s]", ca->ca_id );
+		PKI_log(PKI_LOG_ALWAYS, "CRL has 0 (Zero) Entries [CA: %s]", ca->ca_id );
+	} else {
+
+		// Info, reports the number of entries in the CRL
+		PKI_log(PKI_LOG_ALWAYS, "CRL has %d  Entries [CA: %s]",
+                                ca->entries_num, ca->ca_id);
 	}
 
 	// Some Info
@@ -1029,6 +1032,9 @@ CA_LIST_ENTRY * CA_LIST_ENTRY_new ( void ) {
 	ca->token_name = NULL;
 	ca->token      = NULL;
 
+	// Initial Value
+	ca->crl_status = PKI_OK;
+
 	// Return the newly allocate structure
 	return ca;
 }
@@ -1042,7 +1048,7 @@ void CA_LIST_ENTRY_free ( CA_LIST_ENTRY *ca ) {
 	if (ca->ca_id) PKI_Free (ca->ca_id);
 	if (ca->ca_cert) PKI_X509_CERT_free(ca->ca_cert);
 	if (ca->cid) CA_ENTRY_CERTID_free(ca->cid);
-  if (ca->creds) PKI_CRED_free(ca->creds);
+	if (ca->creds) PKI_CRED_free(ca->creds);
 
 	// Free Server's Token
 	if (ca->token) PKI_TOKEN_free(ca->token);
