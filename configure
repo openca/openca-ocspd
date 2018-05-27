@@ -5,7 +5,7 @@
 #
 # Report bugs to <ocspd-users@lists.sourceforge.net>.
 #
-# Copyright 2007-2015 by Massimiliano Pala and OpenCA Labs
+# Copyright 2007-2018 by Massimiliano Pala and OpenCA Labs
 #
 #
 # Copyright (C) 1992-1996, 1998-2012 Free Software Foundation, Inc.
@@ -764,6 +764,7 @@ build_vendor
 build_cpu
 build
 mybits
+TODAY
 VERSION
 PKG_MIN
 PKG_VER
@@ -1573,7 +1574,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This configure script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it.
 
-Copyright 2007-2015 by Massimiliano Pala and OpenCA Labs
+Copyright 2007-2018 by Massimiliano Pala and OpenCA Labs
 _ACEOF
   exit
 fi
@@ -2286,10 +2287,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+TODAY=`date`
 VERSION=$PACKAGE_VERSION
 PKG_VER=$PACKAGE_VERSION
 PKG_MIN=2
 RC=1
+
 
 
 
@@ -13088,7 +13091,7 @@ pkildlibs="`${libpki_config} --libs`"
 pkiversion=`${libpki_config} --version`
 pkiversion_num=`echo $pkiversion | sed "s|\.||g"`
 
-pkirequired="0.8.9"
+pkirequired="0.8.8"
 pkirequired_num=`echo $pkirequired | sed "s|\.||g"`
 
 if [ $pkiversion_num -lt $pkirequired_num ] ; then
@@ -13287,7 +13290,7 @@ fi
 
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/global-vars src/ocspd/Makefile docs/Makefile etc/Makefile etc/ocspd etc/ocspd.xml etc/token.d/software.xml etc/token.d/etoken.xml etc/token.d/eracom.xml contrib/openca-ocspd.pc contrib/openca-ocspd.xml contrib/openca-ocspd-common.xml scripts/ocspd-genreq.sh"
+ac_config_files="$ac_config_files Makefile src/Makefile src/global-vars src/ocspd/Makefile src/ocspd/includes/ocspdv.h docs/Makefile etc/Makefile etc/ocspd etc/ocspd.xml etc/token.d/software.xml etc/token.d/etoken.xml etc/token.d/eracom.xml contrib/openca-ocspd.pc contrib/openca-ocspd.xml contrib/openca-ocspd-common.xml scripts/ocspd-genreq.sh"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -14330,6 +14333,7 @@ do
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/global-vars") CONFIG_FILES="$CONFIG_FILES src/global-vars" ;;
     "src/ocspd/Makefile") CONFIG_FILES="$CONFIG_FILES src/ocspd/Makefile" ;;
+    "src/ocspd/includes/ocspdv.h") CONFIG_FILES="$CONFIG_FILES src/ocspd/includes/ocspdv.h" ;;
     "docs/Makefile") CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
     "etc/Makefile") CONFIG_FILES="$CONFIG_FILES etc/Makefile" ;;
     "etc/ocspd") CONFIG_FILES="$CONFIG_FILES etc/ocspd" ;;

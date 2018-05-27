@@ -106,10 +106,19 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 		}
 	}
 
+#if ( LIBPKI_VERSION_NUMBER >= 0x80800L )
+
 	// Now generate the signature for the response
 	sig_rv = PKI_X509_OCSP_RESP_sign(resp, tk->keypair, signCert, 
 					 caCert, tk->otherCerts, 
 					 sign_dgst, resp_id_type);
+#else
+
+	// Now generate the signature for the response
+	sig_rv = PKI_X509_OCSP_RESP_sign(resp, tk->keypair, signCert, 
+					 caCert, tk->otherCerts, 
+					 sign_dgst);
+#endif
 
 	// Checks the return code and report the error (if any)
 	if (sig_rv != PKI_OK)
@@ -118,8 +127,8 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 		return PKI_ERR;
 	}
 
-	if (conf->debug)
-		PKI_log_debug ("Response signed successfully");
+	// Some Debugging Information
+	PKI_log_debug ("Response signed successfully");
 
 	// Test Mode: Issues WRONG signatures by flipping the first
  	// bit in the signature. Use it ONLY for testing OCSP clients
@@ -342,7 +351,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		}
 
 		// Response Id Type
-		resp_id_type = ca->response_id_type;
+		resp_id_type = conf->responder_id_type;
 
 		// Here we check for the case where the CRL status is not ok, so
 		// we ask the client to try later, hopefully when we have a valid

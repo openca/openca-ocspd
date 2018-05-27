@@ -10,14 +10,14 @@
 
 static char *ocspd_warning = 
 "\n"
-"OpenCA's OCSP Responder - v%s\n"
-"(c) 2002-2014 by Massimiliano Pala and OpenCA Project\n"
+"OpenCA's OCSP Responder - v%s (Build: " OCSPD_BUILD_DATE ")\n"
+"(c) 2002-2018 by Massimiliano Pala and OpenCA Project\n"
 "    OpenCA licensed software\n"
 "\n";
 
 static char *ocspd_usage[] = {
 "OCSPD - OpenCA OCSP responder daemon\n",
-"(c) 2002-2014 by Massimiliano Pala and OpenCA Project\n",
+"(c) 2002-2018 by Massimiliano Pala and OpenCA Project\n",
 "\n",
 "   USAGE: ocspd args\n",
 "\n",
@@ -115,7 +115,8 @@ bad:
 		exit(1);
 	}
 
-	PKI_log(PKI_LOG_ALWAYS, "OpenCA OCSPD v%s - starting.", VERSION );
+	PKI_log(PKI_LOG_ALWAYS, "OpenCA OCSPD v%s (%s)- starting.", 
+			VERSION, OCSPD_BUILD_DATE);
 
 	if(( ocspd_conf = OCSPD_load_config( configfile )) == NULL ) {
 		my_exit(1, "ERROR::can not load config file!\n");

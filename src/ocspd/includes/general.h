@@ -16,6 +16,7 @@
 #endif
 
 #include <libpki/pki.h>
+#include <libpki/libpkiv.h>
 
 #include <strings.h>
 #include <errno.h>
@@ -26,6 +27,8 @@
 #include <pwd.h>
 
 #include <pthread.h>
+
+#include <ocspdv.h>
 
 #define HTTP_GET		1
 #define HTTP_POST_METHOD	"POST"
@@ -58,6 +61,14 @@
 
 #define OCSPD_SRV_OK	0
 #define OCSPD_SRV_ERR	-1
+
+#if (LIBPKI_VERSION_NUMBER <= 0x00080700L )
+typedef enum {
+	PKI_X509_OCSP_RESPID_NOT_SET       = -1,
+        PKI_X509_OCSP_RESPID_TYPE_BY_NAME  =  0,
+        PKI_X509_OCSP_RESPID_TYPE_BY_KEYID =  1
+} PKI_X509_OCSP_RESPID_TYPE;
+#endif
 
 typedef struct crl_data
 	{
@@ -163,9 +174,6 @@ typedef struct ca_list_st {
 	char *token_config_dir;
 	PKI_TOKEN *token;
 	
-	/* Responder Identifier Type */
-	int response_id_type;
-
 	/* CREDS for TLS connections */
 	PKI_CRED * creds;
 
@@ -227,6 +235,9 @@ typedef struct ocspd_config {
 	/* Digest to be used */
 	PKI_DIGEST_ALG *digest;
 	PKI_DIGEST_ALG *sigDigest;
+
+	/* Responder Identifier Type */
+	int responder_id_type;
 
 	/* OCSP responder default token */
 	char *token_name;

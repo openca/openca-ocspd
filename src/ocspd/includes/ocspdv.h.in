@@ -1,0 +1,17 @@
+
+#ifndef OCSPD_VERSION_H
+# define OCSPD_VERSION_H
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
+// Useful for debugging/info purposes
+# define OCSPD_VERSION_TEXT          "OpenCA OCSPD v@PACKAGE_VERSION@"
+# define OCSPD_BUILD_DATE	     "@TODAY@"
+
+#ifdef  __cplusplus
+}
+#endif
+
+#endif // End of OCSPD_VERSION_H

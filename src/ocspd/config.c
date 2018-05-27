@@ -300,6 +300,29 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 		PKI_Free(tmp_s);
 	}
 
+	// Sets the default
+	h->responder_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_KEYID;
+
+	// Responder Id Type
+	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/response/responderIdType")) != NULL)
+	{
+		if (strncmp_nocase(tmp_s, "keyid", 5) == 0) 
+		{
+			h->responder_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_KEYID;
+		}
+		else if (strncmp_nocase(tmp_s, "name", 4) == 0)
+		{
+			h->responder_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_NAME;
+		}
+		else
+		{
+			PKI_log_err("Can not parse responderIdType: %s (allowed 'keyid' or 'name')", tmp_s);
+			exit(1);
+		}
+
+		PKI_Free(tmp_s);
+	}
+
 	/* Now Parse the PRQP Response Section */
 	if ((tmp_s = PKI_CONFIG_get_value( cnf, "/serverConfig/response/validity/days" )) != NULL)
 	{
@@ -686,7 +709,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 		}
 
 		// If the Server has a Token to be used with this CA, let's
-        // load it
+		// load it
 		if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/serverToken")) == NULL) {
 
 			// No token in config, let's see if a specific cert
@@ -765,31 +788,6 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 
 			// CA is NOT marked as compromised
 			ca->compromised = 0;
-		}
-
-		// Responder Id Type
-		if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/responderIdType")) != NULL)
-		{
-			if (strncmp_nocase(tmp_s, "keyid", 5) == 0) 
-			{
-				ca->response_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_KEYID;
-			}
-			else if (strncmp_nocase(tmp_s, "name", 4) == 0)
-			{
-				ca->response_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_NAME;
-			}
-			else
-			{
-				PKI_log_err("Can not parse responderIdType: %s (allowed 'keyid' or 'name')", tmp_s);
-				exit(1);
-			}
-
-			PKI_Free(tmp_s);
-		}
-		else
-		{
-			// Default Value
-			ca->response_id_type = PKI_X509_OCSP_RESPID_TYPE_BY_KEYID;
 		}
 
 		// Now let's add the CA_LIST_ENTRY to the list of configured CAs
@@ -1127,7 +1125,7 @@ CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *cert,
 	}
 
 	// Let's build the HASH of the Name
-	if((nameDigest = PKI_X509_NAME_get_digest(iName, digestAlg)) == NULL) {
+	if((nameDigest = PKI_X509_NAME_get_digest((PKI_X509_NAME *)iName, digestAlg)) == NULL) {
 
 		// Error, Can not get the digest of the name
 		PKI_log_err("Can not get digest string from certificate's subject");
@@ -1154,7 +1152,7 @@ CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *cert,
 	} else {
 
 		// We build the keyDigest from the keyString
-		if ((keyDigest = PKI_STRING_get_digest(keyString, digestAlg)) == NULL) {
+		if ((keyDigest = PKI_STRING_get_digest((PKI_STRING *)keyString, digestAlg)) == NULL) {
 
 			// Error, can not get digest for the key
 			PKI_log_err("Can not create new keyDigest from keyString");

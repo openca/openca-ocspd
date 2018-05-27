@@ -2,12 +2,13 @@ dnl -*- mode: m4; -*-
 dnl Process this file with autoconf to produce a configure script.
 AC_REVISION($Revision: 1.4 $)
 
-AC_COPYRIGHT([Copyright 2007-2015 by Massimiliano Pala and OpenCA Labs])
+AC_COPYRIGHT([Copyright 2007-2018 by Massimiliano Pala and OpenCA Labs])
 
 dnl Autoconf
 AC_INIT(openca-ocspd, 3.1.2, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
 
 dnl Some variables
+TODAY=`date`
 VERSION=$PACKAGE_VERSION
 PKG_VER=$PACKAGE_VERSION
 PKG_MIN=2
@@ -17,6 +18,7 @@ AC_SUBST(RC)
 AC_SUBST(PKG_VER)
 AC_SUBST(PKG_MIN)
 AC_SUBST(VERSION)
+AC_SUBST(TODAY)
 
 
 dnl Autoconf boilerplate/
@@ -291,7 +293,7 @@ pkildlibs="`${libpki_config} --libs`"
 pkiversion=`${libpki_config} --version`
 pkiversion_num=`echo $pkiversion | sed "s|\.||g"`
 
-pkirequired="0.8.9"
+pkirequired="0.8.8"
 pkirequired_num=`echo $pkirequired | sed "s|\.||g"`
 
 if [[ $pkiversion_num -lt $pkirequired_num ]] ; then
@@ -415,6 +417,7 @@ AC_OUTPUT(
 	src/Makefile
 	src/global-vars
 	src/ocspd/Makefile
+	src/ocspd/includes/ocspdv.h
 	docs/Makefile
 	etc/Makefile
 	etc/ocspd
