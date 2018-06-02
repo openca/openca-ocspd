@@ -70,7 +70,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		if (pathmem == NULL)
 		{
 			PKI_log_err("Buffer Data Error (size = %d, data = 0x%p)!", 
-				(req_pnt ? strlen(req_pnt) : -1), req_pnt);
+				(req_pnt ? strlen(req_pnt) : 0), req_pnt);
 			goto err;
 		}
 

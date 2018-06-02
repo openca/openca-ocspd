@@ -49,7 +49,7 @@ OCSPD_CACHE_ENTRY * OCSPD_CACHE_ENTRY_new(void) {
 // Frees all memory associated with a cache entry
 void OCSPD_CACHE_ENTRY_free(OCSPD_CACHE_ENTRY *e) {
 
-	OCSPD_CACHE_ENTRY *pnt = NULL;
+	// OCSPD_CACHE_ENTRY *pnt = NULL;
 
 	// Arguments Checking
 	if (e == NULL) return;
@@ -111,10 +111,10 @@ void OCSPD_CACHE_free(OCSPD_CACHE * oc) {
 
 	while(cycle < OCSPD_CACHE_TABLE_SIZE) {
 
-		OCSPD_CACHE_ENTRY * next;
+		OCSPD_CACHE_ENTRY * next = NULL;
 			// Pointer for memoizing the next entry
 
-		OCSPD_CACHE_ENTRY * e;
+		OCSPD_CACHE_ENTRY * e = NULL;
 			// Container for the entry
 
 		// If we do not have an entry here, let's move
@@ -166,7 +166,7 @@ int OCSPD_CACHE_entry_idx(ASN1_INTEGER *serialNumber) {
 	// of the value of the HASH of the serialNumber to
 	// build the index of the cache value. Since we want
 	// to maximize speed here
-	PKI_DIGEST *x_dgst = NULL;
+	// PKI_DIGEST *x_dgst = NULL;
 
 	return 0;
 }
