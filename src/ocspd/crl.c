@@ -273,7 +273,7 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 
 		if (i == 0) {
 			// Here the lastUpdate is in the future
-			PKI_log_err("CRL Validity Check FAILED [CA: %s, Status: Future, Code: %d]", 
+			PKI_log_err("CRL Validity Check FAILED [CA: %s, Error: Not Valid Yet, Code: %d]", 
 				ca->ca_id, CRL_NOT_YET_VALID);
 
 			// Updates the CRL internal status
@@ -282,7 +282,7 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 		} else {
 			// Here we do not have a lastUpdate
 			PKI_log_err( "CRL Validity Check FAILED (Missing lastUpdate) "
-					"[CA: %s, Status: Invalid, Code: %d]", 
+					"[CA: %s, Error: no lastUpdate Field, Code: %d]", 
 				ca->ca_id, CRL_ERROR_LAST_UPDATE );
 
 			// Updates the CRL internal status
@@ -297,19 +297,27 @@ int check_crl_validity ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 		if (i == 0) {
 			// nextUpdate Error
 			PKI_log_err ("CRL Validity Check FAILED (Missing nextUpdate) "
-					"[CA: %s, Status: Invalid, Code: %d]",
+					"[CA: %s, Error: no nextUpdate Field, Code: %d]",
 				ca->ca_id, CRL_ERROR_NEXT_UPDATE );
 
 			// Updates the CRL internal status
 			ret = CRL_ERROR_NEXT_UPDATE;
 
 		} else {
+			char * time_s = NULL;
+
+			// Gets the parsed representation of the nextUpdate
+			time_s = PKI_TIME_get_parsed((const PKI_TIME *)ca->nextUpdate);
+
 			// CRL is expired Error
-			PKI_log_err ("CRL Validity Check FAILED [CA: %s, Status: Expired, Code: %d]",
-				ca->ca_id, CRL_EXPIRED );
+			PKI_log_err ("CRL Validity Check FAILED [CA: %s, Error: CRL Expired on %s, Code: %d]",
+				ca->ca_id, time_s, CRL_EXPIRED );
 
 			// Updates the CRL internal status
 			ret = CRL_EXPIRED;
+
+			// Free allocated Memory
+			PKI_Free(time_s);
 		}
 	}
 
