@@ -15,10 +15,8 @@
 @SET_MAKE@
 
 # OpenCA-OCSPD (Makefile)
-# (c) 2000-2009 by OpenCA Labs and Massimiliano Pala
+# (c) 2000-2018 by OpenCA Labs and Massimiliano Pala
 # OpenCA Licensed Software - All rights Reserved
-
-# src/global-vars.in
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -163,8 +161,7 @@ ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/global-vars.in \
-	$(top_srcdir)/build/mkinstalldirs \
-	$(top_srcdir)/src/global-vars
+	$(top_srcdir)/build/mkinstalldirs
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -198,11 +195,11 @@ AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
-AWK = gawk
-CC = gcc
+AWK = @AWK@
+CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
-CHMOD = /usr/bin/chmod
+CHMOD = @CHMOD@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -223,7 +220,7 @@ EXEEXT = @EXEEXT@
 EXTRA_CFLAGS = @EXTRA_CFLAGS@
 FGREP = @FGREP@
 GREP = @GREP@
-INSTALL = ${install_sh_PROGRAM}
+INSTALL = @INSTALL@
 INSTALL_BUILDER = @INSTALL_BUILDER@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -236,7 +233,7 @@ LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
 LIPO = @LIPO@
-LN_S = ln -s
+LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
@@ -254,26 +251,23 @@ PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
-PACKAGE_VERSION = 3.1.2
+PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PKGMK = @PKGMK@
 PKG_MIN = @PKG_MIN@
 PKG_VER = @PKG_VER@
 POD2HTML = @POD2HTML@
-
-# ================================================
-POD2MAN = /usr/bin/pod2man
+POD2MAN = @POD2MAN@
 RANLIB = @RANLIB@
 RC = @RC@
 RPM = @RPM@
-SED = /usr/bin/sed
+SED = @SED@
 SET_MAKE = @SET_MAKE@
-
-#-------- build and utility programs: --------
-SHELL = /bin/sh
+SHELL = @SHELL@
 STRIP = @STRIP@
-VERSION = 3.1.2
+TODAY = @TODAY@
+VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -308,7 +302,7 @@ host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
 htmldir = @htmldir@
-includedir = ${exec_prefix}/include
+includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
@@ -348,45 +342,11 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 user = @user@
-TODAY = @TODAY@
-etc_prefix = $(DESTDIR)${exec_prefix}/etc
-lib_prefix = $(DESTDIR)${exec_prefix}/lib
-var_prefix = $(DESTDIR)${exec_prefix}/var
-doc_prefix = $(DESTDIR)${datadir}/openca-prqpd
-DEST_SBINDIR = $(DESTDIR)${exec_prefix}/sbin
-DEST_BINDIR = $(DESTDIR)${exec_prefix}/bin
-DEST_LIBDIR = $(DESTDIR)${exec_prefix}/lib
-DEST_DATADIR = ${prefix}/share
-DEST_INFODIR = ${prefix}/share/info
-DEST_MANDIR = ${prefix}/share/man
-
-#-------- for distribution building: --------
-dist_user = @dist_user@
-dist_group = @dist_group@
-package_build = @package_build@
-GZIP = @GZIP@
-TAR = @TAR@
-PWD = @PWD@
-MKDIR = @MKDIR@
-CHOWN = @CHOWN@
-ECHO = @ECHO@
-CAT = @CAT@
-MV = @MV@
-CP = @CP@
-RM = rm
-
-# =================================================
-SYSTEM_CFLAGS = 
-SYSTEM_LIBS = 
-
-# =================================================
-LIBPKI_CFLAGS = ${sys_cflags} ${pkicflags}
-LIBPKI_LDLIBS = ${sys_ldlibs} ${pkildlibs}
 SUBDIRS = ocspd
 all: all-recursive
 
 .SUFFIXES:
-$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(top_srcdir)/src/global-vars $(am__configure_deps)
+$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -406,7 +366,6 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)'; \
 	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe);; \
 	esac;
-$(top_srcdir)/src/global-vars $(am__empty):
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
@@ -698,27 +657,7 @@ uninstall-am:
 .PRECIOUS: Makefile
 
 
-__install_dir::
-	@if test -z "$(DIR)"; then $(MAKE) default; \
-	else \
-	    if test ! -d $(DIR); then \
-		$(MAKE) __install_dir DIR=`dirname $(DIR)`; \
-		if test -n "$(MODE)"; then \
-			set -x; \
-			$(INSTALL) -d -o $(USER) -g $(GROUP) -m $(MODE) $(DIR); \
-		else \
-			set -x; \
-			$(INSTALL) -d -o $(USER) -g $(GROUP) $(DIR); \
-		fi; \
-	    fi; \
-	fi;
-
-__install_ln_s::
-	if test -z "$(TARGET)"; then $(MAKE) default; \
-	else \
-	    $(TOP)/relative_ln_s.sh $(TARGET) $(LINK); \
-	    chown -h $(USER):$(GROUP) $(LINK); \
-	fi;
+-include $(top_srcdir)/src/global-vars
 
 # dnl EXTRA_DIST = \
 # 	includes/*.*
