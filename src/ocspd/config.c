@@ -489,7 +489,8 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			PKI_MEM *mm = NULL;
 
 			// Allocates a new PKI_MEM strcuture
-			if((mm = PKI_MEM_new_data(strlen(tmp_s), tmp_s)) == NULL ) {
+			if((mm = PKI_MEM_new_data(strlen(tmp_s),
+				(unsigned char *)tmp_s)) == NULL ) {
 
 				// Reports the Error
 				PKI_ERROR(PKI_ERR_MEMORY_ALLOC, NULL);
@@ -806,7 +807,6 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 
 	int ret = 0;
-	char * x_name = NULL;
 
 	// Input Checks
 	if (!ca) return PKI_ERR;

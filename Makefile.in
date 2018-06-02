@@ -108,7 +108,8 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(SHELL) $(top_srcdir)/build/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/src/ocspd/includes/config.h
-CONFIG_CLEAN_FILES = etc/token.d/software.xml etc/token.d/etoken.xml \
+CONFIG_CLEAN_FILES = src/ocspd/includes/ocspdv.h \
+	etc/token.d/software.xml etc/token.d/etoken.xml \
 	etc/token.d/eracom.xml contrib/openca-ocspd.pc \
 	contrib/openca-ocspd.xml contrib/openca-ocspd-common.xml \
 	scripts/ocspd-genreq.sh
@@ -213,7 +214,8 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/build/compile \
 	$(top_srcdir)/etc/token.d/etoken.xml.in \
 	$(top_srcdir)/etc/token.d/software.xml.in \
 	$(top_srcdir)/scripts/ocspd-genreq.sh.in \
-	$(top_srcdir)/src/ocspd/includes/config.h.in AUTHORS COPYING \
+	$(top_srcdir)/src/ocspd/includes/config.h.in \
+	$(top_srcdir)/src/ocspd/includes/ocspdv.h.in AUTHORS COPYING \
 	ChangeLog INSTALL NEWS README build/compile build/config.guess \
 	build/config.sub build/depcomp build/install-sh \
 	build/ltmain.sh build/missing build/mkinstalldirs install-sh
@@ -339,6 +341,7 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+TODAY = `date +%Y%m%d`
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -464,7 +467,6 @@ pkgconfigdir = @libdir@/pkgconfig
 # PKG_VERSION=`cat VERSION | sed -e s/-[0-9a-zA-Z-]*//`
 # MINOR=`cat VERSION | sed -e s/[0-9.]*-//`
 MAKEFILE = Makefile
-TODAY = `date +%Y%m%d`
 all: all-recursive
 
 .SUFFIXES:
@@ -516,6 +518,8 @@ $(top_srcdir)/src/ocspd/includes/config.h.in: @MAINTAINER_MODE_TRUE@ $(am__confi
 
 distclean-hdr:
 	-rm -f src/ocspd/includes/config.h src/ocspd/includes/stamp-h1
+src/ocspd/includes/ocspdv.h: $(top_builddir)/config.status $(top_srcdir)/src/ocspd/includes/ocspdv.h.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 etc/token.d/software.xml: $(top_builddir)/config.status $(top_srcdir)/etc/token.d/software.xml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 etc/token.d/etoken.xml: $(top_builddir)/config.status $(top_srcdir)/etc/token.d/etoken.xml.in
