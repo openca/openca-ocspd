@@ -1,17 +1,17 @@
 dnl Check for extra support libraries and options 
-AC_DEFUN(AC_CHECK_C_OPTION,
+AC_DEFUN([AC_CHECK_C_OPTION],
 [ 
 old_cflags=$CFLAGS
 CFLAGS="$CFLAGS $1"
 
 AC_MSG_CHECKING([checking for $1 support]);
 
-AC_RUN_IFELSE( [
+AC_RUN_IFELSE([ AC_LANG_SOURCE([
 #include <stdlib.h>
 int main(void)
 {
         return(0);
-}], [ _supported=yes ], [ _supported=no])
+}])], [ _supported=yes ], [ _supported=no])
 
 if [[ $_supported = no ]] ; then
         AC_MSG_RESULT([not supported]);
