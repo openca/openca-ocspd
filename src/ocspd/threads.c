@@ -113,9 +113,6 @@ void * thread_main ( void *arg )
 		// Retrieves the request from the socket
 		req = ocspd_req_get_socket(connfd, ocspd_conf);
 
-		// If there is an error and we want to debug, let's print some useful info
-		if (req == NULL) PKI_log_debug("Can not parse REQ");
-
 		// Now let's build the response
 		resp = make_ocsp_response(req, ocspd_conf);
 
