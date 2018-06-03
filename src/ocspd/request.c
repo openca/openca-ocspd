@@ -1,7 +1,7 @@
 /* file: src/ocspd/ocsp_request.c
  *
  * OpenCA OCSPD - Massimiliano Pala <madwolf@openca.org>
- * Copyright (c) 2001-2009 by Massimiliano Pala and OpenCA Labs
+ * Copyright (c) 2001-2018 by Massimiliano Pala and OpenCA Labs
  * All Rights Reserved
  */
 
@@ -50,9 +50,10 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 	/* If method is METHOD_GET we shall de-urlify the buffer and get the
 	   right begin (keep in mind there might be a path set in the config */
 
-	if( http_msg->method == PKI_HTTP_METHOD_GET )
+	if (http_msg->method == PKI_HTTP_METHOD_GET)
 	{
 		char *req_pnt = NULL;
+		int req_len = 0;
 
 		if (http_msg->path == NULL)
 		{
@@ -61,29 +62,43 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		}
 		
 		req_pnt = http_msg->path;
-		while(strchr(req_pnt, '/') != NULL)
+
+		while (strchr(req_pnt, '/') != NULL)
 		{
 			req_pnt = strchr(req_pnt, '/') + 1;
 		}
 
-		pathmem = PKI_MEM_new_data(strlen(req_pnt), (unsigned char *) req_pnt);
+		// Gets the size of the request in the URL
+		if ((req_len = strlen(req_pnt)) <= 1)
+		{
+			// This does not seem a valid request
+			PKI_log_debug("GET Request without OCSP payload [Path: %s]",
+					http_msg->path);
+			goto err;
+		}
+
+		// Gets the PKI_MEM with the body of the request from the
+		// HTTP GET path field
+		pathmem = PKI_MEM_new_data(req_len, (unsigned char *) req_pnt);
 		if (pathmem == NULL)
 		{
-			PKI_log_err("Buffer Data Error (size = %d, data = 0x%p)!", 
+			PKI_log_err("Buffer Data Error [size = %d, data = %p]", 
 				(req_pnt ? strlen(req_pnt) : 0), req_pnt);
 			goto err;
 		}
 
 		if (PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_URL, 0) != PKI_OK)
 		{
-			PKI_log_err("Error while decoding from URL format!");
+			PKI_log_debug("Can not URL decode OCSP request from HTTP GET path [Path: %s]",
+					http_msg->path);
 			PKI_MEM_free(pathmem);
 			goto err;
 		}
 
 		if (PKI_MEM_decode(pathmem, PKI_DATA_FORMAT_B64, 0) != PKI_OK)
 		{
-			PKI_log_err ("Error decoding B64 Mem");
+			PKI_log_debug("Can not B64 decode the OCSP request from HTTP GET path [Path: %s]",
+					http_msg->path);
 			PKI_MEM_free (pathmem);
 			goto err;
 		}
@@ -91,7 +106,7 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		// Generates a new mem bio from the pathmem
 		if((mem = BIO_new_mem_buf(pathmem->data, (int) pathmem->size)) == NULL)
 		{
-			PKI_log_err("Error Creating a new BIO mem buf (size = %d, data = 0x%p)",
+			PKI_log_debug("Error Creating a new BIO mem buf (size = %d, data = 0x%p)",
 				pathmem->size, pathmem->data);
 			
 			PKI_MEM_free(pathmem);
@@ -105,7 +120,8 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 		// Tries to decode the binary (der) encoded request
 		if ((req_val = d2i_OCSP_REQ_bio(mem, NULL)) == NULL)
 		{
-			PKI_log_err("Can not parse REQ");
+			PKI_log_debug("Can not parse OCSP Request after decoding");
+			
 			BIO_free(mem);
 			PKI_MEM_free(pathmem);
 			goto err;
@@ -113,29 +129,38 @@ PKI_X509_OCSP_REQ * ocspd_req_get_socket ( int connfd, OCSPD_CONFIG *ocspd_conf)
 
 		// Let's free the mem
 		BIO_free(mem);
-
 		PKI_MEM_free(pathmem);
 	} 
 	else if (http_msg->method == PKI_HTTP_METHOD_POST)
 	{
+		if (http_msg->body == NULL || http_msg->body->size <= 0)
+		{
+			// This does not seem a valid request
+			PKI_log_debug("POST Request without OCSP payload [Path: %s]",
+					http_msg->path);
+			goto err;
+		}
+
 		mem = BIO_new_mem_buf(http_msg->body->data, (int) http_msg->body->size);
 		if (mem == NULL)
 		{
-			PKI_log_err( "Memory Allocation Error");
+			PKI_log_err("Buffer Data Error [size = %d, data = %p]", 
+				http_msg->body->size, http_msg->body->data);
 			goto err;
 		}
 		else
 		{
 			if ((req_val = d2i_OCSP_REQ_bio(mem, NULL)) == NULL)
 			{
-				PKI_log_err("Can not parse REQ");
+				PKI_log_debug("Can not parse OCSP REQ from HTTP body");
 			}
 			BIO_free (mem);
 		}
 	} 
 	else
 	{
-		PKI_log_err ( "HTTP Method not supported");
+		PKI_log_err("HTTP Method not supported [Method: %d]",
+				http_msg->method);
 		goto err;
 	}
 
