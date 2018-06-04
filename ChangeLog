@@ -1,3 +1,32 @@
+* Jun  3 2018 Massimiliano Pala <madwolf@openca.org>
+- Improved handling of non OCSP requests (i.e., HTTP w/out OCSP payload)
+
+* May 25 2018 Massimiliano Pala <madwolf@openca.org>
+- Fixed warnings under strict compiling options
+- Fixed aclocal, automake, and autoconf warnings
+- Removed 'addResponderId' option from the default config file
+- Fixed ResponderID generation
+- Fixed checking condition for CRL validity. Improved logging for non-verbose case
+- Fixed possible memory leaks and overall improved logging for config processing and error handling
+- Improved CRL check and reload process and logging
+- Fixed processing of CRLs and improved logging for CRL check and reload process
+
+* Nov  7 2017 Massimiliano Pala <madwolf@openca.org>
+- Fixed incosistency in OCSP_CACHE_Entry_idx() signature. Fixed call to PKI_RWLOCK_init()
+- Added forward declaration for OCSPD_CACHE data structure
+
+* Oct 31 2017 Massimiliano Pala <madwolf@openca.org>
+- Added initial skeleton for caching of responses
+- Added configuration example for reverse proxy on Apache
+- Fix for post-install init.d links generation for RPM
+- Fixed RPM generation and post-install options
+- Fixed issue with ocspd man page generation
+- Removed unused variables in source code to fix strict compile option
+
+* Oct 19 2017 Massimiliano Pala <madwolf@openca.org>
+- Added startup option for memory debugging
+- Memory leak fix and updated to the last libpki master branch
+
 * Oct 18 2017 Massimiliano Pala <madwolf@openca.org>
 - Fixed memory leak in URL entry for OCSPD_build_ca_list()
 
