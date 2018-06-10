@@ -7,6 +7,6 @@ modules=1
 Name: openca-ocspd
 Version: @VERSION@
 Description: OpenCA OCSP Server
-Requires: libpki-0.8.8
+Requires: libpki-0.8.9
 Libs: @libpki_libs@ -lpki
 Cflags: @libpki_cflags@
