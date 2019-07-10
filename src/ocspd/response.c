@@ -76,7 +76,7 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 	if (conf->sigDigest)
 		sign_dgst = conf->sigDigest;
 	else
-		sign_dgst = PKI_ALGOR_get_digest(tk->algor);
+		sign_dgst = PKI_X509_ALGOR_VALUE_get_digest(tk->algor);
 
 	// Some debugging information
 	if (conf->debug)
@@ -144,9 +144,9 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 		signature = PKI_X509_OCSP_RESP_get_data(resp, PKI_X509_DATA_SIGNATURE);
 		if (signature)
 		{
-			PKI_X509_OCSP_RESP_VALUE *resp_val = NULL;
-  			PKI_OCSP_RESP *r = NULL;
-			OCSP_BASICRESP *bsrp = NULL;
+			// PKI_X509_OCSP_RESP_VALUE *resp_val = NULL;
+  			// PKI_OCSP_RESP *r = NULL;
+			// OCSP_BASICRESP *bsrp = NULL;
 
 			int i = 0;
 
@@ -159,6 +159,10 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
     				ASN1_BIT_STRING_set_bit((PKI_STRING *)signature, i, 1);
 			}
 
+			if (PKI_OK != PKI_X509_OCSP_resp_bytes_encode(resp))
+				return PKI_ERR;
+
+			/*
 			r = resp->value;
 
 			// Now we need to re-encode the basicresp
@@ -179,14 +183,15 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 
 			if (bsrp)
 			{
-				/* Now add the encoded data to the request bytes */
+				// Now add the encoded data to the request bytes
 				if (!ASN1_item_pack(bsrp, ASN1_ITEM_rptr(OCSP_BASICRESP),
-												&resp_val->responseBytes->response))
+									&resp_val->responseBytes->response))
 				{
 					PKI_log_err("ERROR while encoding OCSP RESP");
 					return ( PKI_ERR );
 				}
 			}
+			*/
 		}
 		else
 		{
@@ -694,29 +699,20 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 		tmp = ca->cid;
 
 		/* Check for hashes */
-#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
-		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash, &(b->issuerNameHash))) != 0 )
-#else
-		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash, b->issuerNameHash)) != 0 )
-#endif
-		{
-			if (conf->debug) 
-			{
+		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash,
+			PKI_OCSP_CERTID_get_issuerNameHash(b))) != 0 ) {
+			if (conf->debug) {
 				PKI_log_debug("CRL::CA [%s] nameHash mismatch (%d)", 
 					ca->ca_id, ret);
 			}
 			continue;
 		}
-		else if( conf->debug ) 
-		{
+		else if( conf->debug ) {
 			PKI_log_debug("CRL::CA [%s] nameHash OK", ca->ca_id);
 		}
 
-#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
-		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, &(b->issuerKeyHash))) != 0)
-#else
-		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, b->issuerKeyHash)) != 0)
-#endif
+		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, 
+						 PKI_OCSP_CERTID_get_issuerKeyHash(b))) != 0)
 		{
 			if (conf->debug)
 			{
