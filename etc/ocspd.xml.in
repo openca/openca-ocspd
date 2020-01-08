@@ -74,6 +74,10 @@
            to use the next_update_mins set (e.g. 5 minutes) to have mozilla's
            software correclty work with OCSP enabled.
       -->
+      <!-- Include the Signer's Certificate in the Signature -->
+      <pki:includeSignerCert>yes</pki:includeSignerCert>
+      <!-- Include the Issuer's Certificate in the Signature -->
+      <pki:includeIssuerCert>yes</pki:includeIssuerCert>
       <pki:validity>
          <pki:days>0</pki:days>
          <pki:mins>5</pki:mins>

@@ -323,6 +323,26 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 		PKI_Free(tmp_s);
 	}
 
+		// Sets the default
+	h->add_signer_cert = 0;
+
+	// Include Signer's Certificate in the Signature
+	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/response/includeSignerCert")) != NULL)
+	{
+		h->add_signer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+		PKI_Free(tmp_s);
+	}
+
+		// Sets the default
+	h->add_issuer_cert = 0;
+
+	// Include Signer's Certificate in the Signature
+	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/response/includeIssuerCert")) != NULL)
+	{
+		h->add_issuer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+		PKI_Free(tmp_s);
+	}
+
 	/* Now Parse the PRQP Response Section */
 	if ((tmp_s = PKI_CONFIG_get_value( cnf, "/serverConfig/response/validity/days" )) != NULL)
 	{
@@ -789,6 +809,20 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 
 			// CA is NOT marked as compromised
 			ca->compromised = 0;
+		}
+
+		// Include Signer's Certificate in the Signature
+		if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/includeSignerCert")) != NULL)
+		{
+			ca->add_signer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+			PKI_Free(tmp_s);
+		}
+
+		// Include Issuer's Certificate in the Signature
+		if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/includeIssuerCert")) != NULL)
+		{
+			ca->add_issuer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+			PKI_Free(tmp_s);
 		}
 
 		// Now let's add the CA_LIST_ENTRY to the list of configured CAs
