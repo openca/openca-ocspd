@@ -323,6 +323,26 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 		PKI_Free(tmp_s);
 	}
 
+		// Sets the default
+	h->add_signer_cert = 0;
+
+	// Include Signer's Certificate in the Signature
+	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/response/includeSignerCert")) != NULL)
+	{
+		h->add_signer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+		PKI_Free(tmp_s);
+	}
+
+		// Sets the default
+	h->add_issuer_cert = 0;
+
+	// Include Signer's Certificate in the Signature
+	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/response/includeIssuerCert")) != NULL)
+	{
+		h->add_issuer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+		PKI_Free(tmp_s);
+	}
+
 	/* Now Parse the PRQP Response Section */
 	if ((tmp_s = PKI_CONFIG_get_value( cnf, "/serverConfig/response/validity/days" )) != NULL)
 	{
@@ -467,7 +487,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			subTmp_s = NULL;
 
 			// Retrieves the CA cert
-			if ((tmp_cert = PKI_X509_CERT_get_url(tmp_url, NULL, NULL ))== NULL)
+			if ((tmp_cert = PKI_X509_CERT_get_url(tmp_url, -1, NULL, NULL ))== NULL)
 			{
 				// Error, can not get the CA certificate from the
 				// provided URL in the configuration
@@ -504,7 +524,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			}
 
 			// Parses and get the stack of X509_CERT from the PKI_MEM data
-			if ((cc_sk = PKI_X509_CERT_STACK_get_mem(mm, NULL)) == NULL) {
+			if ((cc_sk = PKI_X509_CERT_STACK_get_mem(mm, -1, NULL)) == NULL) {
 
 				// Error, can not get the stack of certs from the CA cert value
 				PKI_log_err("Can not parse cert from /caConfig/caCertValue [CA: %s]",
@@ -725,7 +745,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			else
 			{
 				// The Server's cert URL is found, let's load the certificate
-				if ((tmp_cert = PKI_X509_CERT_get(tmp_s, NULL, NULL)) == NULL) {
+				if ((tmp_cert = PKI_X509_CERT_get(tmp_s, -1, NULL, NULL)) == NULL) {
 
 					// Error, can not get the certificate from the URL
 					PKI_log_err("Can not get server's cert [CA: %s, URL: %s]",
@@ -791,6 +811,20 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			ca->compromised = 0;
 		}
 
+		// Include Signer's Certificate in the Signature
+		if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/includeSignerCert")) != NULL)
+		{
+			ca->add_signer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+			PKI_Free(tmp_s);
+		}
+
+		// Include Issuer's Certificate in the Signature
+		if ((tmp_s = PKI_CONFIG_get_value(cnf, "/caConfig/includeIssuerCert")) != NULL)
+		{
+			ca->add_issuer_cert = ( atoi(tmp_s) == 0 ? 0 : 1 );
+			PKI_Free(tmp_s);
+		}
+
 		// Now let's add the CA_LIST_ENTRY to the list of configured CAs
 		PKI_STACK_push ( ca_list, ca );
 
@@ -823,7 +857,7 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 
 	// Load the new CRL
 	if (( ca->crl = PKI_X509_CRL_get_url(ca->crl_url, 
-						NULL, NULL )) == NULL) {
+					     -1, NULL, NULL )) == NULL) {
 
 		// Error, can not get the CRL from the URL
 		PKI_log_err("Failed loading CRL for [CA: %s, URL: %s]",
@@ -912,7 +946,7 @@ int ocspd_reload_all_ca ( OCSPD_CONFIG *conf ) {
 
 			// Get the CA certificate
 			if ((ca->ca_cert = PKI_X509_CERT_get_url(ca->ca_url,
-							NULL, NULL )) == NULL) {
+							         -1, NULL, NULL )) == NULL) {
 
 				// Can not get the CA Cert from the URL
 				PKI_log_err("Can not load CA cert [CA: %s, URL: %s]",
@@ -1172,7 +1206,7 @@ CA_ENTRY_CERTID * CA_ENTRY_CERTID_new ( PKI_X509_CERT *cert,
 	}
 
 	// Set the Digest Algorithm used
-	if ((ret->hashAlgorithm = PKI_ALGORITHM_new_digest(digestAlg)) == NULL) {
+	if ((ret->hashAlgorithm = PKI_X509_ALGOR_VALUE_new_digest(digestAlg)) == NULL) {
 
 		// Can not retrieve a new digest algorithm reference
 		PKI_log_err("Can not create a new hashAlgorithm for the CA CERTID");

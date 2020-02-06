@@ -76,7 +76,7 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 	if (conf->sigDigest)
 		sign_dgst = conf->sigDigest;
 	else
-		sign_dgst = PKI_ALGOR_get_digest(tk->algor);
+		sign_dgst = PKI_X509_ALGOR_VALUE_get_digest(tk->algor);
 
 	// Some debugging information
 	if (conf->debug)
@@ -144,9 +144,9 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 		signature = PKI_X509_OCSP_RESP_get_data(resp, PKI_X509_DATA_SIGNATURE);
 		if (signature)
 		{
-			PKI_X509_OCSP_RESP_VALUE *resp_val = NULL;
-  			PKI_OCSP_RESP *r = NULL;
-			OCSP_BASICRESP *bsrp = NULL;
+			// PKI_X509_OCSP_RESP_VALUE *resp_val = NULL;
+  			// PKI_OCSP_RESP *r = NULL;
+			// OCSP_BASICRESP *bsrp = NULL;
 
 			int i = 0;
 
@@ -159,6 +159,10 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
     				ASN1_BIT_STRING_set_bit((PKI_STRING *)signature, i, 1);
 			}
 
+			if (PKI_OK != PKI_X509_OCSP_resp_bytes_encode(resp))
+				return PKI_ERR;
+
+			/*
 			r = resp->value;
 
 			// Now we need to re-encode the basicresp
@@ -179,14 +183,15 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 
 			if (bsrp)
 			{
-				/* Now add the encoded data to the request bytes */
+				// Now add the encoded data to the request bytes
 				if (!ASN1_item_pack(bsrp, ASN1_ITEM_rptr(OCSP_BASICRESP),
-												&resp_val->responseBytes->response))
+									&resp_val->responseBytes->response))
 				{
 					PKI_log_err("ERROR while encoding OCSP RESP");
 					return ( PKI_ERR );
 				}
 			}
+			*/
 		}
 		else
 		{
@@ -232,6 +237,8 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	PKI_TIME *nextupd = NULL;
 
 	char *parsedSerial = NULL;
+
+	CA_LIST_ENTRY *ca     = NULL;
 
 	// Set the signature bit to 0 (enable only for non-error responses)
 	signResponse = 0;
@@ -284,7 +291,6 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	for (i = 0; i < id_count; i++)
 	{
 		PKI_INTEGER   *serial = NULL;
-		CA_LIST_ENTRY *ca     = NULL;
 		X509_REVOKED  *entry  = NULL;
 
 		/* Get basic request info */
@@ -522,11 +528,60 @@ end:
 	// Now we need to sign the response
 	if (resp != NULL && signResponse == 1)
 	{
+		PKI_OCSP_RESP  * r = NULL;
+
 		if (sign_ocsp_response(resp, conf, signCert, caCert, tk, resp_id_type) != PKI_OK)
 		{
 			// Free the current response, and generate the appropriate error
 			PKI_X509_OCSP_RESP_free(resp);
 			resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_INTERNALERROR);
+		}
+
+		// Checks the internal value
+		r = PKI_X509_get_value(resp);
+
+	  // Adds the Server's Issuer Certificate
+	  if ( conf->add_issuer_cert || (ca && ca->add_issuer_cert ) )
+	  {
+	  	int idx = 0;
+	  	PKI_X509_CERT *tmp_cert = NULL;
+
+	  	// Adds the CA Certificate to the Stack of Certs
+	  	OCSP_basic_add1_cert(r->bs, tk->cacert && tk->cacert->value != NULL ? tk->cacert->value : NULL);
+
+	  	// Adds all certs in the configuration / otherCerts for the signer
+			for ( idx = 0; idx < PKI_STACK_elements(tk->otherCerts); idx++)
+			{
+				// Gets the Certificate
+				tmp_cert = PKI_STACK_get_num(tk->otherCerts, idx);
+
+				// Adds the Certificate to the Stack of Certs
+				if (tmp_cert && tmp_cert->value) OCSP_basic_add1_cert(r->bs, tmp_cert->value);
+			}
+	  }
+
+		/* If no Signer's Certificate, let's remove all Certs */
+		if ( conf->add_signer_cert == 0 && (ca && ca->add_signer_cert == 0))
+		{
+			PKI_X509_CERT_VALUE * sig_value = NULL;
+			STACK_OF(X509) *other_certs = NULL;
+
+#if OPENSSL_VERSION_NUMBER < 0x1010000fL
+			other_certs = r->bs->certs;
+#else
+			if ((other_certs = sk_X509_new_null()) != NULL) {
+				OCSP_resp_get0_signer(r->bs, &sig_value, other_certs);
+			}
+#endif
+						/* If there's old certs, let's clean the stack */
+			if ( other_certs )
+			{
+				PKI_X509_CERT_VALUE *tmp_cert = NULL;
+				while ( (tmp_cert = sk_X509_pop( other_certs )) != NULL )
+				{
+					X509_free ( tmp_cert );
+				}
+			}
 		}
 	}
 
@@ -694,29 +749,20 @@ CA_LIST_ENTRY *OCSPD_CA_ENTRY_find(OCSPD_CONFIG *conf, OCSP_CERTID *cid)
 		tmp = ca->cid;
 
 		/* Check for hashes */
-#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
-		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash, &(b->issuerNameHash))) != 0 )
-#else
-		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash, b->issuerNameHash)) != 0 )
-#endif
-		{
-			if (conf->debug) 
-			{
+		if((ret = ASN1_OCTET_STRING_cmp(tmp->nameHash,
+			PKI_OCSP_CERTID_get_issuerNameHash(b))) != 0 ) {
+			if (conf->debug) {
 				PKI_log_debug("CRL::CA [%s] nameHash mismatch (%d)", 
 					ca->ca_id, ret);
 			}
 			continue;
 		}
-		else if( conf->debug ) 
-		{
+		else if( conf->debug ) {
 			PKI_log_debug("CRL::CA [%s] nameHash OK", ca->ca_id);
 		}
 
-#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
-		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, &(b->issuerKeyHash))) != 0)
-#else
-		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, b->issuerKeyHash)) != 0)
-#endif
+		if ((ret = ASN1_OCTET_STRING_cmp(tmp->keyHash, 
+						 PKI_OCSP_CERTID_get_issuerKeyHash(b))) != 0)
 		{
 			if (conf->debug)
 			{

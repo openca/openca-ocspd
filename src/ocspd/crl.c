@@ -49,7 +49,7 @@ int ocspd_load_ca_crl(CA_LIST_ENTRY *caEntry, OCSPD_CONFIG *conf) {
 
 	// We now re-load the CRL
 	if( (caEntry->crl = PKI_X509_CRL_get_url(caEntry->crl_url,
-	                                          NULL, NULL)) == NULL ) {
+	                                          -1, NULL, NULL)) == NULL ) {
 		PKI_log_err("Can not reload CRL [CA: %s, URL: %s]", 
 						caEntry->ca_id, caEntry->crl_url->url_s);
 		PKI_RWLOCK_release_write(&conf->crl_lock);

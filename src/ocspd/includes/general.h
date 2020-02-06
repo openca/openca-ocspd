@@ -183,6 +183,10 @@ typedef struct ca_list_st {
 	/* CA Cache */
 	OCSPD_CACHE * oc;
 
+	/* Certificates in Signatures */
+	int add_signer_cert;
+	int add_issuer_cert;
+
 } CA_LIST_ENTRY;
 
 typedef struct {
@@ -266,6 +270,10 @@ typedef struct ocspd_config {
 	char * http_proto;
 	char * base_uri;
 	URL  * bindUrl;
+
+	/* Certificates in Signatures */
+	int add_signer_cert;
+	int add_issuer_cert;
 
 	int *clifd;
 	int connfd;

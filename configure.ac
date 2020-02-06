@@ -5,7 +5,7 @@ AC_REVISION($Revision: 1.4 $)
 AC_COPYRIGHT([Copyright 2007-2018 by Massimiliano Pala and OpenCA Labs])
 
 dnl Autoconf
-AC_INIT(openca-ocspd, 3.1.2, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
+AC_INIT(openca-ocspd, 3.1.3, [ocspd-users@lists.sourceforge.net], [openca-ocspd])
 
 dnl Some variables
 TODAY=`date`
