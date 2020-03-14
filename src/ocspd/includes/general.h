@@ -17,6 +17,7 @@
 
 #include <libpki/pki.h>
 #include <libpki/libpkiv.h>
+#include <cache.h>
 
 #include <strings.h>
 #include <errno.h>
@@ -127,7 +128,7 @@ typedef struct ca_entry_certid
 #define sk_CA_ENTRY_CERTID_find(st) SKM_sk_find(CA_ENTRY_CERTID, (st))
 
 /* Forward Declaration */
-typedef struct ocspd_cache_st OCSPD_CACHE;
+// typedef struct ocspd_cache_st OCSPD_CACHE;
 
 /* List of available CAs */
 typedef struct ca_list_st {
