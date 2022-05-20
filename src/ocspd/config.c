@@ -487,12 +487,12 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			subTmp_s = NULL;
 
 			// Retrieves the CA cert
-			if ((tmp_cert = PKI_X509_CERT_get_url(tmp_url, -1, NULL, NULL ))== NULL)
+			if ((tmp_cert = PKI_X509_CERT_get_url(tmp_url, 0, NULL, NULL ))== NULL)
 			{
 				// Error, can not get the CA certificate from the
 				// provided URL in the configuration
 				PKI_log_err("Can not get CA cert [CA: %s, URL: %s]", 
-						tmp_url->url_s, tmp_id);
+						tmp_id, tmp_url->url_s);
 
 				// Free the memory
 				PKI_Free(tmp_s);
@@ -524,7 +524,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			}
 
 			// Parses and get the stack of X509_CERT from the PKI_MEM data
-			if ((cc_sk = PKI_X509_CERT_STACK_get_mem(mm, -1, NULL)) == NULL) {
+			if ((cc_sk = PKI_X509_CERT_STACK_get_mem(mm, 0, NULL)) == NULL) {
 
 				// Error, can not get the stack of certs from the CA cert value
 				PKI_log_err("Can not parse cert from /caConfig/caCertValue [CA: %s]",
@@ -745,7 +745,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			else
 			{
 				// The Server's cert URL is found, let's load the certificate
-				if ((tmp_cert = PKI_X509_CERT_get(tmp_s, -1, NULL, NULL)) == NULL) {
+				if ((tmp_cert = PKI_X509_CERT_get(tmp_s, 0, NULL, NULL)) == NULL) {
 
 					// Error, can not get the certificate from the URL
 					PKI_log_err("Can not get server's cert [CA: %s, URL: %s]",
@@ -857,7 +857,7 @@ int OCSPD_load_crl ( CA_LIST_ENTRY *ca, OCSPD_CONFIG *conf ) {
 
 	// Load the new CRL
 	if (( ca->crl = PKI_X509_CRL_get_url(ca->crl_url, 
-					     -1, NULL, NULL )) == NULL) {
+					     0, NULL, NULL )) == NULL) {
 
 		// Error, can not get the CRL from the URL
 		PKI_log_err("Failed loading CRL for [CA: %s, URL: %s]",
@@ -946,7 +946,7 @@ int ocspd_reload_all_ca ( OCSPD_CONFIG *conf ) {
 
 			// Get the CA certificate
 			if ((ca->ca_cert = PKI_X509_CERT_get_url(ca->ca_url,
-							         -1, NULL, NULL )) == NULL) {
+							         0, NULL, NULL )) == NULL) {
 
 				// Can not get the CA Cert from the URL
 				PKI_log_err("Can not load CA cert [CA: %s, URL: %s]",
