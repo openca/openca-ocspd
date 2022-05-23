@@ -462,6 +462,13 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 #endif
 			{
 				PKI_log_err ("Can not add a simple resp into the OCSP response");
+				PKI_log_err (cid);
+				PKI_log_err (PKI_OCSP_CERTSTATUS_REVOKED)
+				PKI_log_err (X509_REVOKED_get0_serialNumber(entry));
+				PKI_log_err (thisupd);
+				PKI_log_err (nextupd)
+				PKI_log_err (reason)
+				PKI_log_err (ext)
 
 				// Let's free the current response (since there is an internal error,
 				// we do not want to generate partially valid responses)
