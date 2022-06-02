@@ -274,8 +274,7 @@ if [[ "x$libpki_prefix" != x ]]; then
         libpki_config="${libpki_prefix}/bin/libpki-config"
 else
         AC_PATH_PROG( libpki_config, libpki-config, libpki-config,
-                ${prefix}/bin:$PATH:/bin:/usr/bin:/usr/local/bin:/usr/local/libpki/bin:/opt/csw/bin:/opt/csw/libpki/bin
-)
+                ${prefix}/bin:$PATH:/bin:/usr/bin:/usr/local/bin:/usr/local/libpki/bin:/opt/csw/bin:/opt/csw/libpki/bin)
 
 fi
 
@@ -286,8 +285,8 @@ fi
 
 pkiprefix=`${libpki_config} --prefix`
 pkipath="${libpki_prefix}/lib"
-#libpki_cflags="-I`${libpki_config} --prefix`/include "
-pkicflags="`${libpki_config} --cflags`"
+# libpki_cflags="-I`${libpki_config} --prefix`/include "
+pkicflags="`${libpki_config} --cflags` -I`${libpki_config} --prefix`/include"
 # pkildlibs="-L`${libpki_config} --prefix`/lib -lpki"
 pkildlibs="`${libpki_config} --libs`"
 pkiversion=`${libpki_config} --version`
