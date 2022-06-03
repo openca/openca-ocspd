@@ -455,7 +455,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 
 #if OPENSSL_VERSION_NUMBER >= 0x1010000fL
 			if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
-					X509_REVOKED_get0_serialNumber(entry), thisupd, 
+					X509_REVOKED_get0_revocationDate(entry), thisupd, 
 									nextupd, reason, ext )) == PKI_ERR)
 #else
 			if ((PKI_X509_OCSP_RESP_add(resp, cid, PKI_OCSP_CERTSTATUS_REVOKED,
