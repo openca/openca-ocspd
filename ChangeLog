@@ -1,3 +1,8 @@
+* Jun  2 2022 Massimiliano Pala <madwolf@openca.org>
+- Fixed support for LibPKI 0.9.2
+- Fixed response generation for revoked certificates
+- Fixed compilation on older distributions (RHEL6)
+
 * Jun  3 2018 Massimiliano Pala <madwolf@openca.org>
 - Improved handling of non OCSP requests (i.e., HTTP w/out OCSP payload)
 
