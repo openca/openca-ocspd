@@ -492,7 +492,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 				// Error, can not get the CA certificate from the
 				// provided URL in the configuration
 				PKI_log_err("Can not get CA cert [CA: %s, URL: %s]", 
-						tmp_url->url_s, tmp_id);
+						tmp_id, tmp_url->url_s);
 
 				// Free the memory
 				PKI_Free(tmp_s);

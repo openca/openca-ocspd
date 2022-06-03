@@ -112,6 +112,8 @@ void * thread_main ( void *arg )
 
 		// Retrieves the request from the socket
 		req = ocspd_req_get_socket(connfd, ocspd_conf);
+		PKI_log_debug("got request");
+		PKI_log_debug("%s",req);
 
 		// Debugging Info
 		PKI_log_debug("Received Request [PTR: %p]", req);
