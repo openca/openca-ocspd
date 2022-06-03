@@ -17,7 +17,6 @@
 
 #include <libpki/pki.h>
 #include <libpki/libpkiv.h>
-#include <cache.h>
 
 #include <strings.h>
 #include <errno.h>
@@ -30,6 +29,8 @@
 #include <pthread.h>
 
 #include <ocspdv.h>
+
+#include <cache.h>
 
 #define HTTP_GET		1
 #define HTTP_POST_METHOD	"POST"
@@ -126,9 +127,6 @@ typedef struct ca_entry_certid
 #define sk_CA_ENTRY_CERTID_num(st) SKM_sk_num(CA_ENTRY_CERTID, (st))
 #define sk_CA_ENTRY_CERTID_sort(st) SKM_sk_sort(CA_ENTRY_CERTID, (st))
 #define sk_CA_ENTRY_CERTID_find(st) SKM_sk_find(CA_ENTRY_CERTID, (st))
-
-/* Forward Declaration */
-// typedef struct ocspd_cache_st OCSPD_CACHE;
 
 /* List of available CAs */
 typedef struct ca_list_st {
