@@ -524,7 +524,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			}
 
 			// Parses and get the stack of X509_CERT from the PKI_MEM data
-			if ((cc_sk = PKI_X509_CERT_STACK_get_mem(mm, -1, NULL)) == NULL) {
+			if ((cc_sk = PKI_X509_CERT_STACK_get_mem(mm, PKI_DATA_FORMAT_UNKNOWN, NULL)) == NULL) {
 
 				// Error, can not get the stack of certs from the CA cert value
 				PKI_log_err("Can not parse cert from /caConfig/caCertValue [CA: %s]",
@@ -745,7 +745,7 @@ int OCSPD_build_ca_list ( OCSPD_CONFIG *handler,
 			else
 			{
 				// The Server's cert URL is found, let's load the certificate
-				if ((tmp_cert = PKI_X509_CERT_get(tmp_s, -1, NULL, NULL)) == NULL) {
+				if ((tmp_cert = PKI_X509_CERT_get(tmp_s, PKI_DATA_FORMAT_UNKNOWN, NULL, NULL)) == NULL) {
 
 					// Error, can not get the certificate from the URL
 					PKI_log_err("Can not get server's cert [CA: %s, URL: %s]",

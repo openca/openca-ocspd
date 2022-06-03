@@ -7,6 +7,9 @@
  * ===========================================================
  */
 
+// This include fixes VSCode/Intellisense
+#define _GNU_SOURCE
+
 #include "general.h"
 #include "threads.h"
 #include "crl.h"

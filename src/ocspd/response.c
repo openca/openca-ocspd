@@ -311,7 +311,8 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 			parsedSerial = PKI_INTEGER_get_parsed(serial);
 
 			if (conf->debug)
-				PKI_log( PKI_LOG_INFO, "Request for certificate serial %s", parsedSerial);
+				PKI_log( PKI_LOG_INFO, "Request for certificate [ parsedSerial: '%s', serial: '%s' ]", 
+					parsedSerial, serial);
 		}
 
 		/* Is this request about our CA? */
