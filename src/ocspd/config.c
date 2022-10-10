@@ -267,7 +267,7 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 	/* Digest Algorithm to be used */
 	if ((tmp_s = PKI_CONFIG_get_value(cnf, "/serverConfig/response/digestAlgorithm" )) != NULL)
 	{
-		h->digest = PKI_DIGEST_ALG_get_by_name( tmp_s );
+		h->digest = (PKI_DIGEST_ALG *)PKI_DIGEST_ALG_get_by_name( tmp_s );
 
 		if (!h->digest) 
 		{
@@ -283,12 +283,12 @@ OCSPD_CONFIG * OCSPD_load_config(char *configfile)
 	if((tmp_s = PKI_CONFIG_get_value( cnf,
 			"/serverConfig/response/signatureDigestAlgorithm" )) == NULL)
 	{
-		PKI_log_debug("No specific signature digest algorithm selected.");
+		PKI_DEBUG("No specific signature digest algorithm selected.");
 		h->sigDigest = NULL;
 	}
 	else
 	{
-		h->sigDigest = PKI_DIGEST_ALG_get_by_name( tmp_s );
+		h->sigDigest = (PKI_DIGEST_ALG *) PKI_DIGEST_ALG_get_by_name( tmp_s );
 
 		if (!h->sigDigest) 
 		{

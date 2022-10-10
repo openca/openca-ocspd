@@ -76,7 +76,7 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
 	if (conf->sigDigest)
 		sign_dgst = conf->sigDigest;
 	else
-		sign_dgst = PKI_X509_ALGOR_VALUE_get_digest(tk->algor);
+		sign_dgst = (PKI_DIGEST_ALG *)PKI_X509_ALGOR_VALUE_get_digest(tk->algor);
 
 	// Some debugging information
 	if (conf->debug)
