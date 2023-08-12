@@ -255,12 +255,11 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	}
 
 	// Let's get the number of requests in the OCSP req
-	if ((id_count = OCSP_request_onereq_count(req_val)) <= 0)
-	{
+	if ((id_count = OCSP_request_onereq_count(req_val)) <= 0) {
 		unsigned long error_num = HSM_get_errno(conf->token ? conf->token->hsm : NULL);
 
 		PKI_log_err("Request has no internal OneReq (Crypto Error is %ld::%s)",
-			errno, HSM_get_errdesc(error_num, conf->token ? conf->token->hsm : NULL));
+			error_num, HSM_get_errdesc(error_num, conf->token ? conf->token->hsm : NULL));
 
 		// Let's generate the appropriate error response
 		resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_MALFORMEDREQUEST);
@@ -268,8 +267,9 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	}
 
 	// Now allocates the memory for the response
-	if((resp = PKI_X509_OCSP_RESP_new()) == NULL )
-	{
+	if ((resp = PKI_X509_OCSP_RESP_new()) == NULL )	{
+
+		// Reports the error
 		PKI_log_err("Memory Error: can not allocate a new OCSP response");
 
 		// Let's generate the appropriate error response
@@ -281,22 +281,22 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 	tk = conf->token;
 
 	// Next update (if specified in the configuration)
-	if (conf->set_nextUpdate)
+	if (conf->set_nextUpdate) {
 		nextupd = PKI_TIME_new((conf->nmin * 60 ) + (conf->ndays * 86400));
+	}
 
 	// Gets the reference to the "now" time
 	thisupd = PKI_TIME_new(0);
 
 	/* Examine each certificate id in the request */
-	for (i = 0; i < id_count; i++)
-	{
+	for (i = 0; i < id_count; i++) {
+
 		PKI_INTEGER   *serial = NULL;
 		X509_REVOKED  *entry  = NULL;
 
 		/* Get basic request info */
 		if (((cid = PKI_X509_OCSP_REQ_get_cid(req, i)) == NULL) ||
-				((serial = PKI_X509_OCSP_REQ_get_serial(req, i)) == NULL))
-		{
+			((serial = PKI_X509_OCSP_REQ_get_serial(req, i)) == NULL)) {
 			// NO cid found, let's generate a response for a malformed request
 			if (resp) PKI_X509_OCSP_RESP_free(resp);
 			resp = make_error_response(PKI_X509_OCSP_RESP_STATUS_MALFORMEDREQUEST);
@@ -305,8 +305,7 @@ PKI_X509_OCSP_RESP *make_ocsp_response(PKI_X509_OCSP_REQ *req, OCSPD_CONFIG *con
 		}
 
 		// Some debugging information
-		if (conf->verbose || conf->debug)
-		{
+		if (conf->verbose || conf->debug) {
 			if (parsedSerial) PKI_Free(parsedSerial);
 			parsedSerial = PKI_INTEGER_get_parsed(serial);
 
@@ -541,29 +540,27 @@ end:
 		// Checks the internal value
 		r = PKI_X509_get_value(resp);
 
-	  // Adds the Server's Issuer Certificate
-	  if ( conf->add_issuer_cert || (ca && ca->add_issuer_cert ) )
-	  {
-	  	int idx = 0;
-	  	PKI_X509_CERT *tmp_cert = NULL;
+		// Adds the Server's Issuer Certificate
+		if ( conf->add_issuer_cert || (ca && ca->add_issuer_cert ) )
+		{
+			int idx = 0;
+			PKI_X509_CERT *tmp_cert = NULL;
 
-	  	// Adds the CA Certificate to the Stack of Certs
-	  	OCSP_basic_add1_cert(r->bs, tk->cacert && tk->cacert->value != NULL ? tk->cacert->value : NULL);
+			// Adds the CA Certificate to the Stack of Certs
+			OCSP_basic_add1_cert(r->bs, tk->cacert && tk->cacert->value != NULL ? tk->cacert->value : NULL);
 
-	  	// Adds all certs in the configuration / otherCerts for the signer
-			for ( idx = 0; idx < PKI_STACK_elements(tk->otherCerts); idx++)
-			{
+			// Adds all certs in the configuration / otherCerts for the signer
+			for ( idx = 0; idx < PKI_STACK_elements(tk->otherCerts); idx++) {
 				// Gets the Certificate
 				tmp_cert = PKI_STACK_get_num(tk->otherCerts, idx);
 
 				// Adds the Certificate to the Stack of Certs
 				if (tmp_cert && tmp_cert->value) OCSP_basic_add1_cert(r->bs, tmp_cert->value);
 			}
-	  }
+		}
 
 		/* If no Signer's Certificate, let's remove all Certs */
-		if ( conf->add_signer_cert == 0 && (ca && ca->add_signer_cert == 0))
-		{
+		if ( conf->add_signer_cert == 0 && (ca && ca->add_signer_cert == 0)) {
 			PKI_X509_CERT_VALUE * sig_value = NULL;
 			STACK_OF(X509) *other_certs = NULL;
 

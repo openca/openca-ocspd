@@ -178,9 +178,15 @@ int check_crl(PKI_X509_CRL  * x_crl,
 		return -1;
 	}
 
+#ifdef PKI_X509_DATA_PUBKEY
 	// Gets the Public Key of the CA Certificate
 	if ((pkey = PKI_X509_CERT_get_data(x_cacert, 
-				PKI_X509_DATA_PUBKEY)) == NULL ) { 
+									   PKI_X509_DATA_PUBKEY)) == NULL ) { 
+#else
+	// Gets the Public Key of the CA Certificate
+	if ((pkey = PKI_X509_CERT_get_data(x_cacert, 
+									   PKI_X509_DATA_X509_PUBKEY)) == NULL ) { 
+#endif
 
 		// Reports the error
 		PKI_log_err("Can not parse PubKey from CA Cert");
