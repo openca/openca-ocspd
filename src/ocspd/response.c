@@ -159,7 +159,7 @@ int sign_ocsp_response(PKI_X509_OCSP_RESP *resp, OCSPD_CONFIG *conf, PKI_X509_CE
     				ASN1_BIT_STRING_set_bit((PKI_STRING *)signature, i, 1);
 			}
 
-			if (PKI_OK != PKI_X509_OCSP_resp_bytes_encode(resp))
+			if (PKI_OK != PKI_X509_OCSP_RESP_bytes_encode(resp))
 				return PKI_ERR;
 
 			/*
